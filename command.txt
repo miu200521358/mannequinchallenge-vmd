@@ -1,0 +1,21 @@
+
+11/5時点で、colabのpython は3.6.8
+
+(tensorflow-gpu) C:\MMD\mannequinchallenge-vmd>conda create -n mannequinchallenge-test pip python=3.6
+
+https://pytorch.org/get-started/locally/
+
+conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
+
+conda install scikit-image h5py
+
+# データDL
+
+fetch_checkpoints.sh
+
+fetch_davis_data.sh
+
+conda install opencv
+
+conda install pillow
+
