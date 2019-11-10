@@ -26,7 +26,16 @@ from skimage.io import imsave
 from models import hourglass
 
 import torchvision.utils as vutils
+import logging
 
+# ファイル出力ログ用
+file_logger = logging.getLogger("message").getChild(__name__)
+logger = logging.getLogger("__main__").getChild(__name__)
+
+level = {0: logging.ERROR,
+            1: logging.WARNING,
+            2: logging.INFO,
+            3: logging.DEBUG}
 
 # torch.manual_seed(1)
 class HourglassVariant(torch.nn.Module):
@@ -63,7 +72,7 @@ class HourglassVariant(torch.nn.Module):
 class Pix2PixDataModel(base_model.BaseModel):
 
     def name(self):
-        return 'Pix2PixModel'
+        return 'Pix2PixDataModel'
 
     def __init__(self, opt, _isTrain=False):
         self.initialize(opt)
@@ -79,13 +88,13 @@ class Pix2PixDataModel(base_model.BaseModel):
             raise ValueError("Unknown input type %s" % opt.input)
 
         if self.mode == 'Ours_Bilinear':
-            print(
+            logger.debug(
                 '======================================  DIW NETWORK TRAIN FROM %s======================='
                 % self.mode)
 
             new_model = hourglass.HourglassModel(self.num_input)
 
-            print(
+            logger.debug(
                 '===================Loading Pretrained Model OURS ==================================='
             )
 
@@ -100,7 +109,7 @@ class Pix2PixDataModel(base_model.BaseModel):
                     model_parameters = self.load_network(
                         new_model, 'G', 'best_depth_Ours_Bilinear_inc_6')
                 else:
-                    print('Something Wrong')
+                    logger.debug('Something Wrong')
                     sys.exit()
 
                 new_model.load_state_dict(model_parameters)
@@ -111,7 +120,7 @@ class Pix2PixDataModel(base_model.BaseModel):
             self.netG = new_model
 
         else:
-            print('ONLY SUPPORT Ours_Bilinear')
+            logger.debug('ONLY SUPPORT Ours_Bilinear')
             sys.exit()
 
         self.old_lr = opt.lr
@@ -123,9 +132,9 @@ class Pix2PixDataModel(base_model.BaseModel):
             self.optimizer_G = torch.optim.Adam(
                 self.netG.parameters(), lr=opt.lr, betas=(0.9, 0.999))
             self.scheduler = networks.get_scheduler(self.optimizer_G, opt)
-            print('---------- Networks initialized -------------')
+            logger.debug('---------- Networks initialized -------------')
             networks.print_network(self.netG)
-            print('-----------------------------------------------')
+            logger.debug('-----------------------------------------------')
 
     def set_writer(self, writer):
         self.writer = writer
@@ -167,7 +176,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = self.input_images
         else:
-            print('SOMETHING WRONG with num_input !!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG with num_input !!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         self.prediction_d, self.pred_confidence = self.netG.forward(
@@ -247,7 +256,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         # Combined loss
         self.loss_joint = self.criterion_joint(self.input_images, self.prediction_d,
                                                self.pred_confidence, self.targets)
-        print('Train loss is %f ' % self.loss_joint)
+        logger.debug('Train loss is %f ' % self.loss_joint)
 
         # add to tensorboard
         if n_iter % 100 == 0:
@@ -290,7 +299,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = input_imgs
         else:
-            print('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         prediction_d, _ = self.netG.forward(stack_inputs)
@@ -333,7 +342,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = input_imgs
         else:
-            print('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         prediction_d, pred_confidence = self.netG.forward(stack_inputs)
@@ -357,7 +366,7 @@ class Pix2PixDataModel(base_model.BaseModel):
             output_path = youtube_dir + '/' + \
                 targets['img_1_path'][i].split('/')[-1]
 
-            print('output_path', output_path)
+            logger.debug('output_path', output_path)
             input_confidence = targets['input_confidence'][i]
             gt_depth = targets['depth_gt'][i]
             gt_mask = targets['gt_mask'][i]
@@ -406,7 +415,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = input_imgs
         else:
-            print('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         prediction_d, _ = self.netG.forward(stack_inputs)
@@ -457,7 +466,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = input_imgs
         else:
-            print('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         prediction_log_d, _ = self.netG.forward(stack_inputs)
@@ -470,7 +479,7 @@ class Pix2PixDataModel(base_model.BaseModel):
 
             youtube_dir = save_path + targets['img_1_path'][i].split('/')[-2]
 
-            print('youtube_dir ', youtube_dir)
+            logger.debug('youtube_dir ', youtube_dir)
 
             if not os.path.exists(youtube_dir):
                 os.makedirs(youtube_dir)
@@ -546,7 +555,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         elif self.num_input == 3:
             stack_inputs = input_imgs
         else:
-            print('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
+            logger.debug('SOMETHING WRONG!!!!!!!!!!!!!!!!!!!!!!!')
             sys.exit()
 
         prediction_d, pred_confidence = self.netG.forward(stack_inputs)
@@ -586,7 +595,7 @@ class Pix2PixDataModel(base_model.BaseModel):
             T_1_G = targets['T_1_G'][i]
             original_mvs_depth = targets['original_mvs_depth'][i]
 
-            print('output_path', output_path)
+            logger.debug('output_path', output_path)
             hdf5_file_write = h5py.File(output_path, 'w')
             hdf5_file_write.create_dataset('/prediction/img', data=saved_img)
             hdf5_file_write.create_dataset(
@@ -610,7 +619,7 @@ class Pix2PixDataModel(base_model.BaseModel):
 
             hdf5_file_write.close()
 
-    def run_and_save_DAVIS(self, input_, targets, save_path, output_datas):
+    def run_and_save_DAVIS(self, input_, targets, output_datas):
         assert (self.num_input == 3)
         input_imgs = autograd.Variable(input_.cuda(), requires_grad=False)
 
@@ -620,16 +629,7 @@ class Pix2PixDataModel(base_model.BaseModel):
         pred_log_d = prediction_d.squeeze(1)
         pred_d = torch.exp(pred_log_d)
 
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-
         for i in range(0, len(targets['img_1_path'])):
-
-            youtube_dir = save_path + targets['img_1_path'][i].split('/')[-2]
-
-            if not os.path.exists(youtube_dir):
-                os.makedirs(youtube_dir)
-
             saved_img = np.transpose(
                 input_imgs[i, :, :, :].cpu().numpy(), (1, 2, 0))
 
@@ -638,7 +638,7 @@ class Pix2PixDataModel(base_model.BaseModel):
             # output_path = youtube_dir + '/' + \
             #     targets['img_1_path'][i].split('/')[-1]
             output_path = targets['img_1_path'][i]
-            print(output_path)
+            logger.debug(output_path)
             disparity = 1. / pred_d_ref
             disparity = disparity / np.max(disparity)
             disparity = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
@@ -646,6 +646,35 @@ class Pix2PixDataModel(base_model.BaseModel):
             saved_imgs = (saved_imgs*255).astype(np.uint8)
 
             output_datas.append(saved_imgs)
+
+            # imsave(output_path, saved_imgs)
+
+    def run_and_save_DAVIS_one(self, input_):
+        assert (self.num_input == 3)
+        input_imgs = autograd.Variable(input_.cuda(), requires_grad=False)
+
+        stack_inputs = input_imgs
+
+        prediction_d, pred_confidence = self.netG.forward(stack_inputs)
+        pred_log_d = prediction_d.squeeze(1)
+        pred_d = torch.exp(pred_log_d)
+
+        # saved_img = np.transpose(
+        #     input_imgs[0, :, :, :].cpu().numpy(), (1, 2, 0))
+
+        pred_d_ref = pred_d.data[0, :, :].cpu().numpy()
+
+        # # output_path = youtube_dir + '/' + \
+        # #     targets['img_1_path'][i].split('/')[-1]
+        # disparity = 1. / pred_d_ref
+        # disparity = disparity / np.max(disparity)
+        # disparity = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
+        # saved_imgs = np.concatenate((saved_img, disparity), axis=1)
+        # saved_imgs = (saved_imgs*255).astype(np.uint8)
+
+        # output_datas.append(saved_imgs)
+
+        return pred_d_ref
 
             # imsave(output_path, saved_imgs)
 
@@ -661,4 +690,4 @@ class Pix2PixDataModel(base_model.BaseModel):
     def update_learning_rate(self):
         self.scheduler.step()
         lr = self.optimizer_G.param_groups[0]['lr']
-        print('Current learning rate = %.7f' % lr)
+        logger.debug('Current learning rate = %.7f' % lr)

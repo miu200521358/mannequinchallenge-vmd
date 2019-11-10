@@ -1,0 +1,7 @@
+index	 Nose	 Neck	 RShoulder	 RElbow	 RWrist	 LShoulder	 LElbow	 LWrist	 RHip	 RKnee	 RAnkle	 LHip	 LKnee	 LAnkle	 REye	 LEye	 REar	 LEar	
+
+
+
+ 0:—Î, 1:Â, 2:”’, 3:‰©, 4:“, 5:…F, 6:”Z—Î, 7:”ZÂ, 8:ŠDF, 9:”Z‰©, 10:”Z“, 11:”Z…F
+
+
