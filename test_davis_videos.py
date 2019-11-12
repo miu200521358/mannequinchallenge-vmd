@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import torch
-from options.train_options import TrainOptions
+from options.train_vmd_options import TrainVmdOptions
 from loaders import aligned_data_loader
 from models import pix2pix_model
 
@@ -23,7 +23,7 @@ def run():
     # Windows用に追加
     torch.multiprocessing.freeze_support()
 
-    opt = TrainOptions().parse()  # set CUDA_VISIBLE_DEVICES before import torch
+    opt = TrainVmdOptions().parse()  # set CUDA_VISIBLE_DEVICES before import torch
 
     video_list = 'test_data/test_davis_video_list2.txt'
 
@@ -54,7 +54,7 @@ def run():
         print(i)
         stacked_img = data[0]
         targets = data[1]
-        model.run_and_save_DAVIS(stacked_img, targets, save_path)
+        model.run_and_save_DAVIS_test(stacked_img, targets, save_path)
 
 
 if __name__ == '__main__':

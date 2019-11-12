@@ -668,8 +668,15 @@ class Pix2PixDataModel(base_model.BaseModel):
         # #     targets['img_1_path'][i].split('/')[-1]
         disparity = 1. / pred_d_ref
         disparity = disparity / np.max(disparity)
-        # disparity = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
-        # saved_imgs = np.concatenate((saved_img, disparity), axis=1)
+
+        # # 一旦画像に変換
+        # base_img = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
+        # img = np.concatenate((saved_img, base_img), axis=1)
+        # # ノイズ除去
+        # img = restoration.denoise_tv_chambolle(img, weight=0.1)
+        # # 二次元で平均にする
+        # img_avg = np.mean(img, axis=2)
+
         # saved_imgs = (saved_imgs*255).astype(np.uint8)
 
         # output_datas.append(saved_imgs)

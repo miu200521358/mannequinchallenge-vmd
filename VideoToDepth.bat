@@ -39,7 +39,7 @@ set /P PAST_DEPTH_PATH=■深度推定結果ディレクトリパス:
 
 rem ---  深度推定間隔
 rem echo --------------
-set DEPTH_INTERVAL=60
+set DEPTH_INTERVAL=20
 rem echo 深度推定を行うフレームの間隔を数値で入力して下さい。
 rem echo 値が小さいほど、細かく深度推定を行います。（その分、時間がかかります）
 rem echo 何も入力せず、ENTERを押下した場合、「%DEPTH_INTERVAL%」間隔で処理します。

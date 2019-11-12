@@ -59,8 +59,8 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
         shutil.rmtree(subdir)
     os.makedirs(subdir)
 
-    # 深度用サブディレクトリ
-    depth_pred_dir_path = '{0}/depth_pred'.format(subdir)
+    # 深度用サブディレクトリ(disparity)
+    depth_pred_dir_path = '{0}/depth_disparity'.format(subdir)
     if os.path.exists(depth_pred_dir_path):
         # 既にディレクトリがある場合、一旦削除
         shutil.rmtree(depth_pred_dir_path)
@@ -204,8 +204,12 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
 
             # キャプチャ画像を読み込む
             img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2Lab))
+            # 偏差
             img = np.float32(img)/255.0
+            # サイズを小さくする
             img = transform.resize(img, (height, width))
+            # # コントラストをあげる
+            # img = exposure.equalize_hist(img)
 
             img_list.append(img)
 
@@ -245,9 +249,10 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                     # 1件だけ解析する
                     pred, pred_d_ref = model.run_and_save_DAVIS_one(stacked_img)
 
-                    # 一旦出力する
-                    np.savetxt('{0}/pred_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred, fmt='%.5f')
-                    np.savetxt('{0}/predref_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred_d_ref, fmt='%.5f')
+                    if level[verbose] < logging.INFO:
+                        # 一旦出力する
+                        np.savetxt('{0}/pred_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred, fmt='%.5f')
+                        np.savetxt('{0}/predref_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred_d_ref, fmt='%.5f')
 
                     # logger.debug("pred: %s", _idx)
                     # logger.debug(pred)
@@ -316,7 +321,7 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
 
                         depth_support = np.zeros(17)
                         conf_support = np.zeros(17)
-                        weights = [0.1,0.8,0.4,0.2,0.1,0.4,0.2,0.1,0.8,0.3,0.1,0.8,0.3,0.1,0.05,0.05,0.05,0.05]
+                        weights = [0.1,0.8,0.4,0.1,0.05,0.4,0.1,0.05,0.8,0.5,0.2,0.8,0.5,0.2,0.05,0.05,0.05,0.05]
 
                         # Openposeで繋がっているライン上の深度を取得する
                         for _didx, (start_idx, end_idx, start_w, end_w) in enumerate([(0,1,weights[0],weights[1]),(1,2,weights[1],weights[2]),(2,3,weights[2],weights[3]),(3,4,weights[3],weights[4]), \

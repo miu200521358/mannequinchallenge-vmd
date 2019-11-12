@@ -24,6 +24,7 @@ import h5py
 import os.path
 from skimage.io import imsave
 from models import hourglass
+from scipy import ndimage
 
 import torchvision.utils as vutils
 
@@ -645,6 +646,104 @@ class Pix2PixModel(base_model.BaseModel):
             saved_imgs = (saved_imgs*255).astype(np.uint8)
 
             imsave(output_path, saved_imgs)
+
+    def run_and_save_DAVIS_test(self, input_, targets, save_path):
+        assert (self.num_input == 3)
+        input_imgs = autograd.Variable(input_.cuda(), requires_grad=False)
+
+        stack_inputs = input_imgs
+
+        prediction_d, pred_confidence = self.netG.forward(stack_inputs)
+        pred_log_d = prediction_d.squeeze(1)
+        pred_d = torch.exp(pred_log_d)
+
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        for i in range(0, len(targets['img_1_path'])):
+
+            youtube_dir = save_path + targets['img_1_path'][i].split('/')[-2]
+
+            if not os.path.exists(youtube_dir):
+                os.makedirs(youtube_dir)
+
+            saved_img = np.transpose(
+                input_imgs[i, :, :, :].cpu().numpy(), (1, 2, 0))
+
+            pred_d_ref = pred_d.data[i, :, :].cpu().numpy()
+
+            output_path = youtube_dir + '/' + \
+                targets['img_1_path'][i].split('/')[-1]
+            print(output_path)
+            disparity = 1. / pred_d_ref
+            disparity = disparity / np.max(disparity)
+            disparity = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
+            saved_imgs = np.concatenate((saved_img, disparity), axis=1)
+            saved_imgs = (saved_imgs*255).astype(np.uint8)
+
+            imsave(output_path, saved_imgs)
+
+            # http://www.turbare.net/transl/scipy-lecture-notes/advanced/image_processing/index.html#sharpening
+            blurred_f = ndimage.gaussian_filter(saved_imgs, 3)
+            filter_blurred_f = ndimage.gaussian_filter(blurred_f, 1)
+
+            alpha = 30
+            sharpened = blurred_f + alpha * (blurred_f - filter_blurred_f)
+
+            sharpened_output_path = youtube_dir + '/' + \
+                'sharpened_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(sharpened_output_path, sharpened)
+
+            # ----------
+
+            median3_imgs = ndimage.median_filter(saved_imgs, 3)
+
+            median3_output_path = youtube_dir + '/' + \
+                'median3_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(median3_output_path, median3_imgs)
+
+            # ----------
+
+            median10_imgs = ndimage.median_filter(saved_imgs, 10)
+
+            median10_output_path = youtube_dir + '/' + \
+                'median10_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(median10_output_path, median10_imgs)
+
+            # ----------
+
+            filter_sharpened_imgs = ndimage.median_filter(sharpened, 3)
+
+            filter_sharpened_output_path = youtube_dir + '/' + \
+                'filter_sharpened_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(filter_sharpened_output_path, filter_sharpened_imgs)
+
+            # ----------
+
+            blurred_f = ndimage.gaussian_filter(median3_imgs, 3)
+            filter_blurred_f = ndimage.gaussian_filter(blurred_f, 1)
+
+            sharpened_median_bufferd_output_path = youtube_dir + '/' + \
+                'sharpened_median_bufferd_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(sharpened_median_bufferd_output_path, filter_blurred_f)
+
+            # ----------
+
+            alpha = 30
+            sharpened_median = blurred_f + alpha * (blurred_f - filter_blurred_f)
+
+            sharpened_median_output_path = youtube_dir + '/' + \
+                'sharpened_median_' + targets['img_1_path'][i].split('/')[-1]
+
+            imsave(sharpened_median_output_path, sharpened_median)
+
+            # ----------
+
 
     def switch_to_train(self):
         self.netG.train()
