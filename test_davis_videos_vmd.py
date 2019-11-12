@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import torch
-from options.train_options import TrainOptions
+from options.train_vmd_options import TrainVmdOptions
 from loaders import aligned_data_loader
 from models import pix2pixdata_model
 
@@ -30,9 +30,9 @@ def run():
     # Windows用に追加
     torch.multiprocessing.freeze_support()
 
-    opt = TrainOptions().parse()  # set CUDA_VISIBLE_DEVICES before import torch
+    opt = TrainVmdOptions().parse()  # set CUDA_VISIBLE_DEVICES before import torch
 
-    video_path = "E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/03/night/night_zoom.mp4"
+    video_path = "E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/04/yoiyoi/yoiyoi_3388-3530.mp4"
 
     width = 512
     height = 288

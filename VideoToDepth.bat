@@ -114,7 +114,7 @@ IF /I "%IS_DEBUG%" EQU "warn" (
 )
 
 rem ---  python é¿çs
-python predict_video.py --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END%  --input single_view
+python predict_video.py --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END%  --input single_view --batchSize 1
 
 
 

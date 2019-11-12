@@ -37,13 +37,13 @@ echo If there is a depth file in the directory, the depth estimation result is r
 set PAST_DEPTH_PATH=
 set /P PAST_DEPTH_PATH=** Depth estimation result directory path: 
 
-rem ---  Depth estimation interval
-echo --------------
-set DEPTH_INTERVAL=10
-echo Please enter the interval of the frame to be estimated depth.
-echo The smaller the value, the finer the depth estimation. (It takes time to do so)
-echo If nothing is entered and ENTER is pressed, processing is done at the interval of "%DEPTH_INTERVAL%".
-set /P DEPTH_INTERVAL="** Depth estimation interval: "
+rem ---rem ---  Depth estimation interval
+rem ---echo --------------
+set DEPTH_INTERVAL=20
+rem ---echo Please enter the interval of the frame to be estimated depth.
+rem ---echo The smaller the value, the finer the depth estimation. (It takes time to do so)
+rem ---echo If nothing is entered and ENTER is pressed, processing is done at the interval of "%DEPTH_INTERVAL%".
+rem ---set /P DEPTH_INTERVAL="** Depth estimation interval: "
 
 rem ---  Maximum number of people in the image
 
@@ -117,6 +117,6 @@ IF /I "%IS_DEBUG%" EQU "warn" (
 )
 
 rem ---  python é¿çs
-python tensorflow/predict_video.py --model_path tensorflow/data/NYU_FCRN.ckpt --centerz_model_path tensorflow/data2/centerz-depth.ckpt --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END%
+python tensorflow/predict_video.py --model_path tensorflow/data/NYU_FCRN.ckpt --centerz_model_path tensorflow/data2/centerz-depth.ckpt --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END% --input single_view --batchSize 1
 
 

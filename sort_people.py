@@ -22,7 +22,7 @@ level = {0: logging.ERROR,
             3: logging.DEBUG}
 
 # 人物ソート
-def exec(pred_depth_ary, pred_depth_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose):
+def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose):
 
     logger.warn("人物ソート開始 ---------------------------")
 
@@ -68,10 +68,10 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_image_ary, video_path, now
         frame_img = np.array(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), dtype=np.float32)
 
         # 前フレームと出来るだけ近い位置のINDEX順番を計算する
-        sorted_idxs, now_pattern_datas, normal_pattern_datas = calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth_ary[_idx], pred_depth_support_ary[_idx], frame_img)
+        sorted_idxs, now_pattern_datas, normal_pattern_datas = calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth_ary[_idx], pred_depth_support_ary[_idx], pred_conf_ary[_idx], pred_conf_support_ary[_idx], frame_img)
 
         # 出力する
-        output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_pattern_datas, data, pred_depth_ary[_idx], json_path, now_str, file_name, reverse_specific_dict, order_specific_dict)
+        output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_pattern_datas, json_path, now_str, file_name, reverse_specific_dict, order_specific_dict)
 
         # 画像保存
         save_image(_idx, pred_image_ary, frame_img, number_people_max, sorted_idxs, now_pattern_datas, subdir, cnt, png_lib, scale, verbose)
@@ -83,7 +83,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_image_ary, video_path, now
         cnt += 1
 
 # 前フレームと出来るだけ近い位置のINDEX順番を計算する
-def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth, pred_depth_support, frame_img):
+def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth, pred_depth_support, pred_conf, pred_conf_support, frame_img):
     if _idx == 0:
         # 今回情報
         now_pattern_datas = [{} for x in range(number_people_max)]
@@ -100,7 +100,7 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             # パターン別のデータ
             now_pattern_datas[_pidx] = {"pidx": _pidx, "in_idx": _pidx, "pattern": OPENPOSE_NORMAL["pattern"], 
                 "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], 
-                "depth": [0 for x in range(18)], "depth_support": [], "color": [0 for x in range(18)]}
+                "depth": [0 for x in range(18)], "depth_support": [], "conf_support": [], "color": [0 for x in range(18)]}
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
@@ -118,14 +118,15 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
                 else:
                     now_pattern_datas[_pidx]["color"][oidx] = np.array([0,0,0])
 
-            # 深度補佐データ        
-            now_pattern_datas[_pidx]["depth_support"] = pred_depth_support
+            # 深度補佐データ
+            now_pattern_datas[_pidx]["depth_support"] = pred_depth_support[_pidx]
+            now_pattern_datas[_pidx]["conf_support"] = pred_conf_support[_pidx]
 
         # 前回データはそのまま
         return sorted_idxs, now_pattern_datas, now_pattern_datas
     else:
         # ソートのための準備
-        pattern_datas = prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, frame_img)
+        pattern_datas = prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, pred_conf, pred_conf_support, frame_img)
 
         if _idx in order_specific_dict:
             # 順番が指定されている場合、適用
@@ -173,7 +174,7 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
         # 1人の場合はソート不要
         sorted_idxs = [0]
     else:
-        all_most_common_idxs, conf_in_idx_list = calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 0.2, 0.6)
+        all_most_common_idxs, conf_in_idx_list = calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 0.01, 0.6)
 
         logger.debug("_idx: %s, all_most_common_idxs: %s", _idx, all_most_common_idxs)
         logger.debug("_idx: %s, conf_in_idx_list: %s", _idx, conf_in_idx_list)
@@ -278,12 +279,12 @@ def calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_da
         # ノーマルパターン別保持
         normal_pattern_datas[_sidx] = pattern_datas[_eidx*4]
     
-    for pd in [now_pattern_datas, normal_pattern_datas]:
-        for (pd_one, ppd) in zip(pd, past_pattern_datas):
-            for _jidx in range(18):
-                if pd_one["depth"][_jidx] == 0:
-                    # 信頼度が低い場合、前回データで上書き
-                    pd_one["depth"][_jidx] = ppd["depth"][_jidx]
+    # for pd in [now_pattern_datas, normal_pattern_datas]:
+    #     for (pd_one, ppd) in zip(pd, past_pattern_datas):
+    #         for _jidx in range(18):
+    #             if pd_one["depth"][_jidx] == 0:
+    #                 # 信頼度が低い場合、前回データで上書き
+    #                 pd_one["depth"][_jidx] = ppd["depth"][_jidx]
 
     return now_pattern_datas, normal_pattern_datas
 
@@ -294,7 +295,7 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
     all_most_common_idxs = [[] for x in range(len(pattern_datas))]
 
     # 信頼度降順に並べ直す
-    conf_in_idx_list = sorted(list(map(lambda x: (x["in_idx"], np.average(x["conf"])), pattern_datas)), key=lambda x: x[1], reverse=True)
+    conf_in_idx_list = sorted(list(map(lambda x: (x["in_idx"], np.mean(x["conf"])), pattern_datas)), key=lambda x: x[1], reverse=True)
 
     # 信頼度降順のin_idx順に埋めていく
     for (in_idx, _) in conf_in_idx_list:
@@ -304,18 +305,15 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
         most_common_idxs = []
 
         for dimensional in ["x", "y", "depth", "depth_support", "color"]:
-            for _jidx in [1,2,3,5,6,8,9,10,11,12,13,1]:
+            # 範囲を限定する（深度補佐は全部）
+            jidx_rng = [0,1,2,3,5,6,8,9,10,11,12,13,1] if dimensional != "depth_support" else range(len(pattern_datas[in_idx][dimensional]))
+            for _jidx in jidx_rng:
                 # 前回の該当関節データ
                 past_per_joint_data = []
                 for ppt_data in past_pattern_datas:
                     if ppt_data["conf"][_jidx] >= th:
                         # 信頼度が足りている場合、該当辺の該当関節値を設定
-                        if dimensional == "depth_support":
-                            # 深度サポート情報はとりあえず平均値だけとする
-                            past_per_joint_data.append(np.median(ppt_data[dimensional]))
-                            continue
-                        else:
-                            past_per_joint_data.append(ppt_data[dimensional][_jidx])
+                        past_per_joint_data.append(ppt_data[dimensional][_jidx])
                     else:
                         # 信頼度が足りてない場合、とりあえずあり得ない値で引っかからないように
                         if dimensional == "color":
@@ -324,7 +322,7 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
                             past_per_joint_data.append(999999999999)
 
                 # 今回チェックしようとしている関節値    
-                per_joint_value = pattern_datas[in_idx][dimensional][_jidx] if dimensional != "depth_support" else np.median(pattern_datas[in_idx][dimensional])
+                per_joint_value = pattern_datas[in_idx][dimensional][_jidx]
 
                 if dimensional == "color":
                     # 色の場合は組合せでチェック
@@ -428,7 +426,7 @@ OPENPOSE_REVERSE_LOWER = {"pattern": "low_reverse", 0:0, 1:1, 2:2, 3:3, 4:4, 5:5
 
 # ソートのための準備
 # 人物データを、通常・全身反転・上半身反転・下半身反転の4パターンに分ける
-def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, frame_img):
+def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, pred_conf, pred_conf_support, frame_img):
     pattern_datas = [{} for x in range(number_people_max * 4)]
 
     for _pidx in range(number_people_max):
@@ -438,7 +436,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             # パターン別のデータ
             pattern_datas[in_idx] = {"pidx": _pidx, "in_idx": in_idx, "pattern": op_idx_data["pattern"], 
                 "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], 
-                "depth": [0 for x in range(18)], "depth_support": [], "color": [0 for x in range(18)]}
+                "depth": [0 for x in range(18)], "depth_support": [], "conf_support": [], "color": [0 for x in range(18)]}
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
@@ -460,9 +458,10 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                     pattern_datas[in_idx]["color"][oidx] = frame_img[int(now_xyc[o+1]),int(now_xyc[o])]
                 else:
                     pattern_datas[in_idx]["color"][oidx] = np.array([0,0,0])
-
-            # 深度補佐データ        
-            pattern_datas[in_idx]["depth_support"] = pred_depth_support
+                    
+            # 深度補佐データ
+            pattern_datas[in_idx]["depth_support"] = pred_depth_support[_pidx]
+            pattern_datas[in_idx]["conf_support"] = pred_conf_support[_pidx]
 
             logger.debug(pattern_datas[in_idx])
 
@@ -471,7 +470,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
     return pattern_datas
 
 # ソート順に合わせてデータを出力する
-def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_pattern_datas, data, pred_depth, json_path, now_str, file_name, reverse_specific_dict, order_specific_dict):
+def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_pattern_datas, json_path, now_str, file_name, reverse_specific_dict, order_specific_dict):
     # 指定ありの場合、メッセージ追加
     if _idx in order_specific_dict:
         file_logger.warning("※※{0:05d}F目、順番指定 [{0}:{2}]".format( _idx, _display_idx, ','.join(map(str, sorted_idxs))))
@@ -514,8 +513,16 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
         # 追記モードで開く
         depthf = open(depth_idx_path, 'a')
         # 一行分を追記
-        depthf.write("{0}, {1},{2}\n".format(_display_idx, ','.join([ str(x) for x in npd["depth"] ]), ','.join([ str(x) for x in npd["depth_support"] ])))
+        depthf.write("{0}, {1},{2}\n".format(_display_idx, ','.join([ str(x) for x in npd["depth"] ]), ','.join([ str(x) for x in npd["depth_support"] ]) ))
         depthf.close()
+
+        # 深度データ
+        conf_idx_path = '{0}/{1}_{3}_idx{2:02d}/conf.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+        # 追記モードで開く
+        conff = open(conf_idx_path, 'a')
+        # 一行分を追記
+        conff.write("{0}, {1},{2}\n".format(_display_idx, ','.join([ str(x) for x in npd["conf"] ]), ','.join([ str(x) for x in npd["conf_support"] ]) ))
+        conff.close()
 
     file_logger.warning("＊＊{0:05d}F目の出力順番: [{0}:{2}], 位置: {3}".format(_idx, _display_idx, ','.join(map(str, sorted_idxs)), sorted(display_nose_pos.items()) ))
 

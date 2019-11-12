@@ -659,22 +659,22 @@ class Pix2PixDataModel(base_model.BaseModel):
         pred_log_d = prediction_d.squeeze(1)
         pred_d = torch.exp(pred_log_d)
 
-        # saved_img = np.transpose(
-        #     input_imgs[0, :, :, :].cpu().numpy(), (1, 2, 0))
+        saved_img = np.transpose(
+            input_imgs[0, :, :, :].cpu().numpy(), (1, 2, 0))
 
         pred_d_ref = pred_d.data[0, :, :].cpu().numpy()
 
         # # output_path = youtube_dir + '/' + \
         # #     targets['img_1_path'][i].split('/')[-1]
-        # disparity = 1. / pred_d_ref
-        # disparity = disparity / np.max(disparity)
+        disparity = 1. / pred_d_ref
+        disparity = disparity / np.max(disparity)
         # disparity = np.tile(np.expand_dims(disparity, axis=-1), (1, 1, 3))
         # saved_imgs = np.concatenate((saved_img, disparity), axis=1)
         # saved_imgs = (saved_imgs*255).astype(np.uint8)
 
         # output_datas.append(saved_imgs)
 
-        return pred_d_ref
+        return disparity, pred_d_ref
 
             # imsave(output_path, saved_imgs)
 

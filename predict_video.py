@@ -32,7 +32,7 @@ import json
 import sys
 import csv
 import sort_people
-
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,8 +44,6 @@ level = {0: logging.ERROR,
             1: logging.WARNING,
             2: logging.INFO,
             3: logging.DEBUG}
-
-BATCH_SIZE = 1
 
 # 入力値
 WIDTH = 512
@@ -60,6 +58,13 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
         # 既にディレクトリがある場合、一旦削除
         shutil.rmtree(subdir)
     os.makedirs(subdir)
+
+    # 深度用サブディレクトリ
+    depth_pred_dir_path = '{0}/depth_pred'.format(subdir)
+    if os.path.exists(depth_pred_dir_path):
+        # 既にディレクトリがある場合、一旦削除
+        shutil.rmtree(depth_pred_dir_path)
+    os.makedirs(depth_pred_dir_path)
 
     # ファイル用ログの出力設定
     log_file_path = '{0}/message.log'.format(depth_path)
@@ -93,23 +98,35 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
     # 深度アニメーションGIF用
     png_lib = []
     # 人数分の深度データ
-    pred_depth_ary = [[[0 for z in range(18)] for y in range(number_people_max)] for x in range(json_size)]
+    # pred_depth_ary = [[[0 for z in range(18)] for y in range(number_people_max)] for x in range(json_size)]
+    pred_depth_ary = np.zeros((json_size,number_people_max,18))
     # 人数分の深度データ（追加分）
-    pred_depth_support_ary = [[[] for y in range(number_people_max)] for x in range(json_size)]
+    pred_depth_support_ary = np.zeros((json_size,number_people_max,17))
+    # 人数分の信頼度データ
+    pred_conf_ary = np.zeros((json_size,number_people_max,18))
+    # 人数分の信頼度データ（追加分）
+    pred_conf_support_ary = np.zeros((json_size,number_people_max,17))
     # 人数分の深度画像データ
-    pred_image_ary = [[] for x in range(json_size)]
+    pred_image_ary = [[] for x in range(json_size) ]
 
     # 深度用ファイル
     depthf_path = '{0}/depth.txt'.format(depth_path)
+    # 信頼度用ファイル
+    conff_path = '{0}/conf.txt'.format(depth_path)
 
     past_depthf_path = None
+    past_conff_path = None
     if past_depth_path is not None:
         past_depthf_path = '{0}/depth.txt'.format(past_depth_path)
+        past_conff_path = '{0}/conf.txt'.format(past_depth_path)
 
     logger.info("past_depthf_path: %s", past_depthf_path)
+    logger.info("past_conff_path: %s", past_conff_path)
 
-    if past_depthf_path is not None and os.path.exists(past_depthf_path) :
+    if past_depthf_path is not None and os.path.exists(past_depthf_path) and  past_conff_path is not None and os.path.exists(past_conff_path):
         # 深度ファイルが両方ある場合、それを読み込む
+
+        # ----------------------
         pdepthf = open(past_depthf_path, 'r')
 
         fkey = -1
@@ -123,8 +140,8 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                 # キー値が異なる場合、インデックス取り直し
                 fnum = 0
 
-            pred_depth_ary[fidx][fnum] = [ float(x) for x in row[1:19] ]
-            pred_depth_support_ary[fidx][fnum] = [ float(x) for x in row[20:] ]
+            pred_depth_ary[fidx][fnum] = np.array([float(x) for x in row[1:19]])
+            pred_depth_support_ary[fidx][fnum] = np.array([float(x) for x in row[19:]])
 
             # 人物インデックス加算
             fnum += 1
@@ -135,10 +152,34 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
         
         # 自分の深度情報ディレクトリにコピー
         shutil.copyfile(past_depthf_path, depthf_path)
-    else:                
-        # 深度ファイルがない場合、出力する
-        depthf = open(depthf_path, 'w')
 
+        # ----------------------
+        pconff = open(past_conff_path, 'r')
+
+        fkey = -1
+        fnum = 0
+        # カンマ区切りなので、csvとして読み込む
+        reader = csv.reader(pconff)
+
+        for row in reader:
+            fidx = int(row[0])
+            if fkey != fidx:
+                # キー値が異なる場合、インデックス取り直し
+                fnum = 0
+
+            pred_conf_ary[fidx][fnum] = np.array([float(x) for x in row[1:19]])
+            pred_conf_support_ary[fidx][fnum] = np.array([float(x) for x in row[19:]])
+
+            # 人物インデックス加算
+            fnum += 1
+            # キー保持
+            fkey = fidx
+        
+        pconff.close()
+        
+        # 自分の信頼度情報ディレクトリにコピー
+        shutil.copyfile(past_conff_path, conff_path)
+    else:                
         # 動画を1枚ずつ画像に変換する
         in_idx = 0
         cnt = 0
@@ -171,12 +212,10 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
             logger.debug("cnt: %s, _idx: %s, flag: %s, len(img_list): %s", cnt, _idx, flag, len(img_list))
 
             if (_idx > 0 and _idx % interval == 0 and _idx < json_size) or (cnt >= json_size + start_frame - 1):
-
-                # 一定間隔フレームおきにキャプチャした画像を深度推定する
-                logger.warning("深度推定 idx: %s(%s)", _idx, cnt)
+                start = time.time()
 
                 eval_num_threads = 2
-                video_data_loader = aligned_data_loader.DAVISCaptureDataLoader(img_list, BATCH_SIZE)
+                video_data_loader = aligned_data_loader.DAVISCaptureDataLoader(img_list, opt.batchSize)
                 video_dataset = video_data_loader.load_data()
                 logger.debug('========================= Video dataset #images = %d =========' %
                     len(video_data_loader))
@@ -195,12 +234,20 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                 logger.debug('TESTING ON VIDEO')
 
                 model.switch_to_eval()
-
+                
+                # 深度ファイルを追記形式で開く
+                depthf = open(depthf_path, 'a')
+                conff = open(conff_path, 'a')
+                
                 for i, data in enumerate(video_dataset):
                     stacked_img = data[0]
 
                     # 1件だけ解析する
-                    pred = model.run_and_save_DAVIS_one(stacked_img)
+                    pred, pred_d_ref = model.run_and_save_DAVIS_one(stacked_img)
+
+                    # 一旦出力する
+                    np.savetxt('{0}/pred_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred, fmt='%.5f')
+                    np.savetxt('{0}/predref_{1:012d}.txt'.format(depth_pred_dir_path, in_idx), pred_d_ref, fmt='%.5f')
 
                     # logger.debug("pred: %s", _idx)
                     # logger.debug(pred)
@@ -235,106 +282,125 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                         logger.debug("dpidx: %s, len(data[people]): %s", dpidx, len(data["people"]))
                         for o in range(0,len(data["people"][dpidx]["pose_keypoints_2d"]),3):
                             oidx = int(o/3)
-                            if data["people"][dpidx]["pose_keypoints_2d"][o+2] > 0.2:
-                                # 信頼度が足る場合
+                            # オリジナルの画像サイズから、縮尺を取得
+                            scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][o] / org_width
+                            scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][o+1] / org_height
+                            # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
 
-                                # オリジナルの画像サイズから、縮尺を取得
-                                scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][o] / org_width
-                                scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][o+1] / org_height
-                                # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
+                            # 縮尺を展開して、深度解析後の画像サイズに合わせる
+                            pred_x = int(pred_width * scale_org_x)
+                            pred_y = int(pred_height * scale_org_y)
 
-                                # 縮尺を展開して、深度解析後の画像サイズに合わせる
-                                pred_x = int(pred_width * scale_org_x)
-                                pred_y = int(pred_height * scale_org_y)
+                            if 0 <= pred_y < len(pred) and 0 <= pred_x < len(pred[pred_y]):
+                                # depths = pred[pred_y-3:pred_y+4,pred_x-3:pred_x+4].flatten()
+                                # for x_shift in range(-3,4):
+                                #     for y_shift in range(-3, 4):
+                                #         if 0 <= pred_x + x_shift < pred_width and 0 <= pred_y + y_shift < pred_height:
+                                #             depths.append(pred[pred_y + y_shift][pred_x + x_shift])
 
-                                if 0 <= pred_y < len(pred) and 0 <= pred_x < len(pred[pred_y]):
-                                    # depths = pred[pred_y-3:pred_y+4,pred_x-3:pred_x+4].flatten()
-                                    # for x_shift in range(-3,4):
-                                    #     for y_shift in range(-3, 4):
-                                    #         if 0 <= pred_x + x_shift < pred_width and 0 <= pred_y + y_shift < pred_height:
-                                    #             depths.append(pred[pred_y + y_shift][pred_x + x_shift])
+                                # 周辺3ピクセルで平均値を取る
+                                pred_list = pred[pred_y-1:pred_y+2,pred_x-1:pred_x+2].flatten()
+                                depth = 0 if len(pred_list) == 0 else np.mean(pred_list)
 
-                                    # 周辺3ピクセルで平均値を取る
-                                    pred_list = pred[pred_y-3:pred_y+4,pred_x-3:pred_x+4].flatten()
-                                    depth = 0 if len(pred_list) == 0 else np.median(pred_list)
+                                logger.debug("pred_x: %s, pred_y: %s, depth: %s", pred_x, pred_y, depth)
 
-                                    logger.debug("pred_x: %s, pred_y: %s, depth: %s", pred_x, pred_y, depth)
-
-                                    pred_depth_ary[in_idx][dpidx][oidx] = depth
-                                    pred_image_ary[in_idx] = pred
-                                else:
-                                    # たまにデータが壊れていて、「9.62965e-35」のように取れてしまった場合の対策
-                                    pred_depth_ary[in_idx][dpidx][oidx] = 0
-                                    pred_image_ary[in_idx] = pred
+                                pred_depth_ary[in_idx][dpidx][oidx] = depth
+                                pred_conf_ary[in_idx][dpidx][oidx] = data["people"][dpidx]["pose_keypoints_2d"][o+2]
+                                pred_image_ary[in_idx] = pred
                             else:
-                                # 信頼度が足りない場合
-                                logger.debug("×信頼度 _idx: %s, dpidx: %s, o:%s, oidx: %s", in_idx, dpidx, o, oidx)
+                                # たまにデータが壊れていて、「9.62965e-35」のように取れてしまった場合の対策
                                 pred_depth_ary[in_idx][dpidx][oidx] = 0
+                                pred_conf_ary[in_idx][dpidx][oidx] = 0
                                 pred_image_ary[in_idx] = pred
 
+
+                        depth_support = np.zeros(17)
+                        conf_support = np.zeros(17)
+                        weights = [0.1,0.8,0.4,0.2,0.1,0.4,0.2,0.1,0.8,0.3,0.1,0.8,0.3,0.1,0.05,0.05,0.05,0.05]
+
                         # Openposeで繋がっているライン上の深度を取得する
-                        for (start_idx, end_idx) in [(0,1),(1,2),(2,3),(3,4),(1,5),(5,6),(6,7),(1,8),(8,9),(9,10),(1,11),(11,12),(12,13),(0,14),(14,16),(0,15),(15,17)]:
-                            if data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+2] > 0.2 and data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+2] > 0.2:
-                                # 開始から終了まで信頼度を満たしている場合
+                        for _didx, (start_idx, end_idx, start_w, end_w) in enumerate([(0,1,weights[0],weights[1]),(1,2,weights[1],weights[2]),(2,3,weights[2],weights[3]),(3,4,weights[3],weights[4]), \
+                                (1,5,weights[1],weights[5]),(5,6,weights[5],weights[6]),(6,7,weights[6],weights[7]),(1,8,weights[1],weights[8]),(8,9,weights[8],weights[9]), \
+                                (9,10,weights[9],weights[10]),(1,11,weights[1],weights[11]),(11,12,weights[11],weights[12]),(12,13,weights[12],weights[13]),(0,14,weights[0],weights[14]), \
+                                (14,16,weights[14],weights[16]),(0,15,weights[0],weights[15]),(15,17,weights[15],weights[17])]):
+                            # オリジナルの画像サイズから、縮尺を取得
+                            start_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3] / org_width
+                            start_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+1] / org_height
+                            start_conf = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+2]
+                            # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
 
-                                # オリジナルの画像サイズから、縮尺を取得
-                                start_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3] / org_width
-                                start_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+1] / org_height
-                                # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
+                            # 縮尺を展開して、深度解析後の画像サイズに合わせる
+                            start_pred_x = int(pred_width * start_scale_org_x)
+                            start_pred_y = int(pred_height * start_scale_org_y)
 
-                                # 縮尺を展開して、深度解析後の画像サイズに合わせる
-                                start_pred_x = int(pred_width * start_scale_org_x)
-                                start_pred_y = int(pred_height * start_scale_org_y)
+                            # オリジナルの画像サイズから、縮尺を取得
+                            end_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3] / org_width
+                            end_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+1] / org_height
+                            end_conf = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+2]
+                            # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
 
-                                # オリジナルの画像サイズから、縮尺を取得
-                                end_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3] / org_width
-                                end_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+1] / org_height
-                                # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
+                            # 縮尺を展開して、深度解析後の画像サイズに合わせる
+                            end_pred_x = int(pred_width * end_scale_org_x)
+                            end_pred_y = int(pred_height * end_scale_org_y)
 
-                                # 縮尺を展開して、深度解析後の画像サイズに合わせる
-                                end_pred_x = int(pred_width * end_scale_org_x)
-                                end_pred_y = int(pred_height * end_scale_org_y)
+                            per_depth_support = []
+                            per_weight_support = []
+                            
+                            # 深度範囲
+                            pred_x_rng = abs(start_pred_x - end_pred_x)
+                            pred_y_rng = abs(start_pred_y - end_pred_y)
 
-                                if 0 <= start_pred_y < len(pred) and 0 <= start_pred_x < len(pred[start_pred_y]) and 0 <= end_pred_y < len(pred) and 0 <= end_pred_x < len(pred[end_pred_y]):
-                                    # 深度値が正常に取れている場合
-                                    
-                                    # 深度範囲
-                                    pred_x_rng = abs(start_pred_x - end_pred_x)
-                                    pred_y_rng = abs(start_pred_y - end_pred_y)
+                            # 短い方の距離を単位とする
+                            pred_per = min(pred_x_rng, pred_y_rng)
 
-                                    # 短い方の距離を単位とする
-                                    pred_per = min(pred_x_rng, pred_y_rng)
+                            # 軸
+                            pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
+                            pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
 
-                                    # 軸
-                                    pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
-                                    pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
+                            # 重み
+                            pred_weigths = np.linspace( start_w, end_w, pred_per + 1 )
 
-                                    for (x, y) in zip(pred_x_line, pred_y_line):
-                                        if 0 <= y < len(pred) and 0 <= x < len(pred[y]):
-                                            # 直線を描いて深度取得
-                                            pred_depth_support_ary[in_idx][dpidx].append(pred[y][x])
+                            for (x, y, w) in zip(pred_x_line, pred_y_line, pred_weigths):
+                                # 直線状の深度と重みを計算
+                                per_depth_support.append(pred[y][x])
+                                per_weight_support.append(w)
+
+                            # 重み付き平均を計算
+                            depth_support[_didx] = np.average(per_depth_support, weights=per_weight_support)
+                            conf_support[_didx] = np.mean([start_conf, end_conf])
+
+                        pred_depth_support_ary[in_idx][dpidx] = depth_support
+                        pred_conf_support_ary[in_idx][dpidx] = conf_support
 
                         # ------------------
+
                         # 深度データ
                         depthf.write("{0}, {1},{2}\n".format(in_idx, ','.join([ str(x) for x in pred_depth_ary[in_idx][dpidx] ]), ','.join([ str(x) for x in pred_depth_support_ary[in_idx][dpidx] ])))
+                        # 信頼度データ
+                        conff.write("{0}, {1},{2}\n".format(in_idx, ','.join([ str(x) for x in pred_conf_ary[in_idx][dpidx] ]), ','.join([ str(x) for x in pred_conf_support_ary[in_idx][dpidx] ])))
 
                     in_idx += 1
 
+                # 一定間隔フレームおきにキャプチャした画像を深度推定する
+                logger.warning("深度推定 idx: %s(%s) 処理: %s[sec]", _idx, cnt, time.time() - start)
+
                 img_list = []
 
-            cnt += 1
+                # 一旦閉じる
+                depthf.close()
+                conff.close()
 
-        depthf.close()
+            cnt += 1
 
         cap.release()
         cv2.destroyAllWindows()
 
     # 基準深度で再計算
     # zファイルの方は基準深度再計算なし
-    recalc_depth(pred_depth_ary, pred_depth_support_ary)
+    pred_depth_ary, pred_depth_support_ary = recalc_depth(pred_depth_ary, pred_depth_support_ary)
 
     # 人物ソート
-    sort_people.exec(pred_depth_ary, pred_depth_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose)
+    sort_people.exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose)
 
 
 
@@ -404,9 +470,12 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
 
 
 # 基準深度で再計算
-def recalc_depth(pred_depth_ary, pred_depth_support_ary):    
+def recalc_depth(pred_depth_ary, pred_depth_support_ary):
+    pred_depth_ary = np.array(pred_depth_ary)
+    pred_depth_support_ary = np.array(pred_depth_support_ary)
+
     # 基準となる深度
-    base_depth = np.median(pred_depth_ary[pred_depth_ary != 0])
+    base_depth = np.median(pred_depth_ary[0][pred_depth_ary[0] != 0])
 
     # # 深度0が含まれていると狂うので、ループしてチェックしつつ合算
     # pred_sum = 0
@@ -422,18 +491,7 @@ def recalc_depth(pred_depth_ary, pred_depth_support_ary):
     logger.info("基準深度取得: base_depth: %s", base_depth)   
 
     # 基準深度で入れ直し
-    for depth_ary in [pred_depth_ary, pred_depth_support_ary]:
-        for fidx, pred_ary in enumerate(depth_ary):
-            for pidx, pred_one in enumerate(pred_ary):
-                logger.debug("fidx: %s, pidx: %s, len(pred_one) :%s", fidx, pidx, len(pred_one))
-
-                for jidx, pred_joint in enumerate(pred_one):
-                    if depth_ary[fidx][pidx][jidx] > 0:
-                        # 深度が入っていたら、基準値を引く
-                        depth_ary[fidx][pidx][jidx] -= base_depth
-                    else:
-                        # 深度がない場合、とりあえず0
-                        depth_ary[fidx][pidx][jidx] = 0
+    return np.where(pred_depth_ary != 0, (pred_depth_ary - base_depth) * 100, pred_depth_ary), np.where(pred_depth_support_ary != 0, (pred_depth_support_ary - base_depth) * 100, pred_depth_support_ary)
 
 def outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height):
     fourcc_names = ["I420"]

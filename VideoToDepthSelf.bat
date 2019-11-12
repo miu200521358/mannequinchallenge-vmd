@@ -24,13 +24,13 @@ set OPENPOSE_JSON="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\04\yoiyoi\yoiyo
 set NUMBER_PEOPLE_MAX=4
 set PAST_DEPTH_PATH="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\04\yoiyoi\yoiyoi_3388-3530_20191108_043201\yoiyoi_3388-3530_json_20191108_043201_depth"
 
-set INPUT_VIDEO="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\04\yoiyoi\yoiyoi.mp4"
-set OPENPOSE_JSON="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\04\yoiyoi\yoiyoi_20191109_203727\yoiyoi_json"
+set INPUT_VIDEO="E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/04/yoiyoi/yoiyoi_3388-3530.mp4"
+set OPENPOSE_JSON="E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/04/yoiyoi/yoiyoi_3388-3530_20191108_043201/yoiyoi_3388-3530_json"
 set NUMBER_PEOPLE_MAX=4
-set PAST_DEPTH_PATH="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\04\yoiyoi\yoiyoi_3388-3530_20191108_043201\yoiyoi_3388-3530_json_20191108_043201_depth"
+set PAST_DEPTH_PATH=
 
 
-set DEPTH_INTERVAL=60
+set DEPTH_INTERVAL=20
 set FRAME_END=-1
 set REVERSE_SPECIFIC_LIST=
 set ORDER_SPECIFIC_LIST=
@@ -38,7 +38,7 @@ set AVI_OUTPUT=yes
 set VERBOSE=2
 
 rem ---  python é¿çs
-python predict_video.py --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END% --input single_view
+python predict_video.py --past_depth_path "%PAST_DEPTH_PATH%" --video_path %INPUT_VIDEO% --json_path %OPENPOSE_JSON% --interval %DEPTH_INTERVAL% --reverse_specific "%REVERSE_SPECIFIC_LIST%" --order_specific "%ORDER_SPECIFIC_LIST%" --avi_output %AVI_OUTPUT% --verbose %VERBOSE% --number_people_max %NUMBER_PEOPLE_MAX% --end_frame_no %FRAME_END% --input single_view --batchSize 1
 
 
 
