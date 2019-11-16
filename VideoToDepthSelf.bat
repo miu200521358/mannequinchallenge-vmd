@@ -29,6 +29,11 @@ set OPENPOSE_JSON="E:/MMD/MikuMikuDance_v926x64/Work/201805_auto/04/yoiyoi/yoiyo
 set NUMBER_PEOPLE_MAX=4
 set PAST_DEPTH_PATH=
 
+set INPUT_VIDEO="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\03\ivory\ivory.mp4"
+set OPENPOSE_JSON="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\03\ivory\ivory_20191112_044054\ivory_json"
+set PAST_DEPTH_PATH="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\03\ivory\ivory_20191112_044054\ivory_json_20191113_041232_depth"
+set NUMBER_PEOPLE_MAX=3
+
 
 set DEPTH_INTERVAL=20
 set FRAME_END=-1
