@@ -407,63 +407,6 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
     # 人物ソート
     sort_people.exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose)
 
-
-
-
-
-    # # 並べ直したindex用配列
-    # sorted_idxs = [[-1 for y in range(number_people_max)] for x in range(json_size)]
-    # # フレームの画像（1区間分だけ保持）
-    # frame_imgs = [[] for x in range(interval) ]
-    # # 各関節の最も信頼度の高い値
-    # max_conf_ary = [[ 0 for x in range(18) ] for y in range(number_people_max)]
-    # max_conf_color_ary = [[ 0 for x in range(18) ] for y in range(number_people_max)]
-    # # 前回のXY位置情報
-    # past_data = [[] for y in range(number_people_max)]
-    # # 前回の深度
-    # past_depths = [[] for y in range(number_people_max)]
-
-    # logger.info("人物ソート開始 ---------------------------")
-
-    # cnt = 0
-    # cap = cv2.VideoCapture(video_path)
-    # while(cap.isOpened()):
-    #     # 動画から1枚キャプチャして読み込む
-    #     flag, frame = cap.read()  # Capture frame-by-frame
-
-    #     # logger.debug("start_frame: %s, n: %s, len(openpose_2d): %s", start_frame, n, len(openpose_2d))
-
-    #     # 深度推定のindex
-    #     _idx = cnt - start_frame
-    #     _display_idx = cnt
-
-    #     # 開始フレームより前は飛ばす
-    #     if start_frame > cnt:
-    #         cnt += 1
-    #         continue
-
-    #     # 終わったフレームより後は飛ばす
-    #     # 明示的に終わりが指定されている場合、その時も終了する
-    #     if flag == False or cnt >= json_size or (end_frame_no > 0 and _idx >= end_frame_no):
-    #         break
-
-    #     # フレームイメージをオリジナルのサイズで保持
-    #     frame_imgs[_idx % interval] = np.array(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), dtype=np.float32)
-
-    #     if _idx >= 0:
-    #         # 一区間後になればソート処理実行(1F単位で深度推定してるので、internvalを1固定)
-    #         all_now_data, all_now_depths = sort_people.sort(cnt, _display_idx, _idx, sorted_idxs, now_str, 1, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, pred_depth_ary, pred_xy_ary, pred_image_ary, frame_imgs, max_conf_ary, max_conf_color_ary, org_width, org_height, past_data, past_depths, png_lib, verbose)                   
-
-    #         # 出力し終わったら、今回データを過去データとして保持する。
-    #         for pidx, sidx in enumerate(sorted_idxs[_idx]):
-    #             past_data[sidx] = all_now_data[pidx]["people"][0]
-
-    #             if _idx % interval == 0:
-    #                 past_depths[sidx] = all_now_depths[pidx]
-
-    #     # インクリメント
-    #     cnt += 1
-
     if is_avi_output:
         # MMD用背景AVI出力
         outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height)

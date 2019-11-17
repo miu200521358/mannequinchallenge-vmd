@@ -102,7 +102,7 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
         for _pidx in range(number_people_max):
             # パターン別のデータ
             now_pattern_datas[_pidx] = {"eidx": _pidx, "pidx": _pidx, "sidx": _pidx, "in_idx": _pidx, "pattern": OPENPOSE_NORMAL["pattern"], 
-                "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], 
+                "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], "fill": [False for x in range(18)], 
                 "depth": [0 for x in range(18)], "depth_support": [], "conf_support": [], "color": [0 for x in range(18)]}
 
             # 1人分の関節位置データ
@@ -230,16 +230,16 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
         # 前回用にノーマルパターン保持
         normal_pattern_datas[_eidx] = pattern_datas[now_sidx*4]
     
-    # 過去データがあると精度落ちる？
-    # # ノーマルパターンに過去データ引継
-    # if _idx > 0:
-    #     for (npd, ppd) in zip(normal_pattern_datas, past_pattern_datas):
-    #         for _didx, dimensional in enumerate(["x","y","depth"]):
-    #             for _ddidx, (npdd, ppdd) in enumerate(zip(npd[dimensional], ppd[dimensional])):
-    #                 if npd["conf"][_ddidx] <= 0:
-    #                     # 信頼度が全くない場合、過去データで埋める（信頼度は下げる）
-    #                     npd[dimensional][_ddidx] = ppdd
-    #                     npd["conf"][_ddidx] = ppd["conf"][_ddidx] * 0.8
+    # ノーマルパターンに過去データ引継
+    if _idx > 0:
+        for (npd, ppd) in zip(normal_pattern_datas, past_pattern_datas):
+            for _didx in range(len(npd["conf"])):
+                if npd["conf"][_didx] <= 0:
+                    for dimensional in ["x","y","depth"]:
+                        # 信頼度が全くない場合、過去データで埋める（信頼度は下げる）
+                        npd[dimensional][_didx] = ppd[dimensional][_didx]
+                    npd["conf"][_didx] = ppd["conf"][_didx] * 0.8
+                    npd["fill"][_didx] = True
 
     for npd in now_pattern_datas:
         logger.debug("_idx: %s, now_pattern_datas: pidx: %s, in_idx: %s, pattern: %s", _idx, npd["pidx"], npd["in_idx"], npd["pattern"])
@@ -269,30 +269,22 @@ def calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_da
                 now_per_joint_data = []
                 now_per_joint_conf = []
                 for _pidx, pt_data in enumerate(pattern_datas[now_sidx*4:now_sidx*4+4]):
-                    if pt_data["conf"][_jidx] >= th:
-                        # 信頼度が足りている場合、該当辺の該当関節値を設定
-                        if dimensional == "xy":
-                            now_per_joint_data.append(np.array([pt_data["x"][_jidx],pt_data["y"][_jidx]]))
-                        else:
-                            now_per_joint_data.append(pt_data[dimensional][_jidx])
-                        # 信頼度が足りてるリストに追加
-                        now_per_joint_conf.append(_pidx)
+                    # 該当辺の該当関節値を設定
+                    if dimensional == "xy":
+                        now_per_joint_data.append(np.array([pt_data["x"][_jidx],pt_data["y"][_jidx]]))
                     else:
-                        # 信頼度が足りてない場合、とりあえずあり得ない値で引っかからないように
-                        if dimensional == "xy":
-                            now_per_joint_data.append(np.full(2,0.0))
-                        else:
-                            now_per_joint_data.append(999999999999)
+                        now_per_joint_data.append(pt_data[dimensional][_jidx])
+                    now_per_joint_conf.append(pt_data["conf"][_jidx])
 
                 if past_pattern_datas[_eidx]["conf"][_jidx] >= th:
                     # 信頼度が足りてる場合、前回のチェック対象関節値    
                     if dimensional == "xy":
                         # XY座標の場合は組合せでチェック
                         past_per_joint_value = np.array([past_pattern_datas[_eidx]["x"][_jidx],past_pattern_datas[_eidx]["y"][_jidx]])
-                        nearest_idx = get_nearest_idx_ary(now_per_joint_data, past_per_joint_value)
+                        nearest_idx = get_nearest_idx_ary(now_per_joint_data, past_per_joint_value, now_per_joint_conf)
                     else:
                         past_per_joint_value = past_pattern_datas[_eidx][dimensional][_jidx]
-                        nearest_idx = get_nearest_idxs(now_per_joint_data, past_per_joint_value)
+                        nearest_idx = get_nearest_idxs(now_per_joint_data, past_per_joint_value, now_per_joint_conf)
 
                     if 0 < len(nearest_idx) < len(now_per_joint_conf):
                         # 偏向して近似INDEXがある場合、そのまま追加
@@ -361,29 +353,18 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
             for _jidx in jidx_rng:
                 # 前回の該当関節データ
                 past_per_joint_data = []
+                past_per_joint_conf = []
                 for ppt_data in past_pattern_datas:
-                    if ppt_data["conf"][_jidx] >= th:
-                        # 信頼度が足りている場合、該当辺の該当関節値を設定
-                        if dimensional == "xy":
-                            past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["y"][_jidx]]))
-                        elif dimensional == "xd":
-                            past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["depth"][_jidx]]))
-                        elif dimensional == "xyd":
-                            past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["depth"][_jidx],ppt_data["y"][_jidx]]))
-                        else:
-                            past_per_joint_data.append(ppt_data[dimensional][_jidx])
+                    past_per_joint_conf.append(ppt_data["conf"][_jidx])
+                    # 信頼度が足りている場合、該当辺の該当関節値を設定
+                    if dimensional == "xy":
+                        past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["y"][_jidx]]))
+                    elif dimensional == "xd":
+                        past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["depth"][_jidx]]))
+                    elif dimensional == "xyd":
+                        past_per_joint_data.append(np.array([ppt_data["x"][_jidx],ppt_data["depth"][_jidx],ppt_data["y"][_jidx]]))
                     else:
-                        # 信頼度が足りてない場合、とりあえずあり得ない値で引っかからないように
-                        if dimensional == "xy":
-                            past_per_joint_data.append(np.full(2,0.0))
-                        elif dimensional == "xd":
-                            past_per_joint_data.append(np.array([0, 999999999999]))
-                        elif dimensional == "xyd":
-                            past_per_joint_data.append(np.array([0, 0, 999999999999]))
-                        elif dimensional == "color":
-                            past_per_joint_data.append(np.full(3,999.9))
-                        else:
-                            past_per_joint_data.append(999999999999)
+                        past_per_joint_data.append(ppt_data[dimensional][_jidx])
 
                 all_past_per_joint_data.append(past_per_joint_data)
 
@@ -398,12 +379,16 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
                     per_joint_value = pd[dimensional][_jidx]
 
                 if dimensional in ["xyd", "xd", "xy", "color"]:
-                    # XY座標と色の場合は組合せでチェック
-                    now_nearest_idxs.extend(get_nearest_idx_ary(past_per_joint_data, per_joint_value))
+                    if pd["conf"][_jidx] >= th:
+                        # XY座標と色の場合は組合せでチェック
+                        now_nearest_idxs.extend(get_nearest_idx_ary(past_per_joint_data, per_joint_value, past_per_joint_conf))
+                    else:
+                        # 足りてない場合、あり得ない値
+                        now_nearest_idxs.append(-1)
                 else:
                     if pd["conf"][_jidx] >= th:
                         # 信頼度が足りてる場合、直近のINDEXを取得
-                        now_nearest_idxs.extend(get_nearest_idxs(past_per_joint_data, per_joint_value))
+                        now_nearest_idxs.extend(get_nearest_idxs(past_per_joint_data, per_joint_value, past_per_joint_conf))
                     else:
                         # 足りてない場合、あり得ない値
                         now_nearest_idxs.append(-1)
@@ -446,14 +431,19 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
                     # 出現回数分登録
                     sum_most_common_idxs.append(mci[0])
         # 4件全体の出現頻出
-        mci_sum_most_common_idxs = Counter(sum_most_common_idxs).most_common()
-        for _pidx in range(4):
-            # 全体出現平均を設定
-            all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = mci_sum_most_common_idxs[0][1] / len(sum_most_common_idxs)
+        if len(sum_most_common_idxs) > 0:
+            mci_sum_most_common_idxs = Counter(sum_most_common_idxs).most_common()
+            for _pidx in range(4):
+                # 全体出現平均を設定
+                all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = mci_sum_most_common_idxs[0][1] / len(sum_most_common_idxs)
+        else:
+            for _pidx in range(4):
+                # 全体出現平均を設定
+                all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = 0
 
     return all_most_common_per
 
-def get_nearest_idxs(target_list, num):
+def get_nearest_idxs(target_list, num, conf_list=None):
     """
     概要: リストからある値に最も近い値のINDEXを返却する関数
     @param target_list: データ配列
@@ -461,36 +451,52 @@ def get_nearest_idxs(target_list, num):
     @return 対象値に最も近い値のINDEXの配列（同じ値がヒットした場合、すべて返す）
     """
 
-    # logger.debug(target_list)
-    # logger.debug(num)
+    target_conf_list = []
+
+    # if conf_list:
+    #     # 信頼度の中央値(の更に半分で余裕を持たせる)を満たす要素だけ追加
+    #     conf_median = np.median(np.array(conf_list)) / 2
+    #     for t, c in zip(target_list, conf_list):
+    #         if c >= conf_median:
+    #             target_conf_list.append(t)
+    #         else:
+    #             # 要件を満たせない場合、あり得ない値
+    #             target_conf_list.append(999999999999)
+    # else:
+    target_conf_list = target_list
 
     # リスト要素と対象値の差分を計算し最小値のインデックスを取得
-    idx = np.abs(np.asarray(target_list) - num).argmin()
+    idx = np.abs(np.asarray(target_conf_list) - num).argmin()
 
     result_idxs = []
 
-    for i, v in enumerate(target_list):
+    for i, v in enumerate(target_conf_list):
         # INDEXが該当していて、かつ値が有効な場合、結果として追加
-        if v == target_list[idx] and v != 999999999999:
+        if v == target_conf_list[idx] and v != 999999999999:
             result_idxs.append(i)
     
     return result_idxs
 
-def get_nearest_idx_ary(target_list, num_ary):
-    """
-    概要: リストからある値に最も近い値のINDEXを返却する関数
-    @param target_list: データ配列
-    @param num: 対象値
-    @return 対象値に最も近い値のINDEX
-    """
+def get_nearest_idx_ary(target_list, num_ary, conf_list=None):
 
-    # logger.debug(target_list)
-    # logger.debug(num)
+    target_conf_list = []
+
+    # if conf_list:
+    #     # 信頼度の中央値(の更に半分で余裕を持たせる)を満たす要素だけ追加
+    #     conf_median = np.median(np.array(conf_list)) / 2
+    #     for t, c in zip(target_list, conf_list):
+    #         if c >= conf_median:
+    #             target_conf_list.append(t)
+    #         else:
+    #             # 要件を満たせない場合、あり得ない値
+    #             target_conf_list.append(np.full(len(target_list[0]), 999999999999))
+    # else:
+    target_conf_list = target_list
 
     target_list2 = []
-    for t in target_list:
-        # 現在との色の差を絶対値で求める
-        target_list2.append(np.round(np.abs(t - num_ary)))
+    for t in target_conf_list:
+        # 現在との差を絶対値で求める
+        target_list2.append(np.abs(np.asarray(t) - np.asarray(num_ary)))
 
     # logger.debug("num_ary: %s", num_ary)
     # logger.debug("target_list: %s", target_list)
@@ -535,7 +541,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
 
             # パターン別のデータ
             pattern_datas[in_idx] = {"eidx": _eidx, "pidx": _pidx, "sidx": _pidx, "in_idx": in_idx, "pattern": op_idx_data["pattern"], 
-                "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], 
+                "x": [0 for x in range(18)], "y": [0 for x in range(18)], "conf": [0 for x in range(18)], "fill": [0 for x in range(18)], 
                 "depth": [0 for x in range(18)], "depth_support": [], "conf_support": [], "color": [0 for x in range(18)]}
 
             # 1人分の関節位置データ
@@ -589,10 +595,17 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
         os.makedirs(os.path.dirname(idx_path), exist_ok=True)
         
         output_data = {"people": [{"pose_keypoints_2d": []}]}
-        for (npd_x, npd_y, npd_conf) in zip(npd["x"], npd["y"], npd["conf"]):
-            output_data["people"][0]["pose_keypoints_2d"].append(npd_x)
-            output_data["people"][0]["pose_keypoints_2d"].append(npd_y)
-            output_data["people"][0]["pose_keypoints_2d"].append(npd_conf)
+        for (npd_x, npd_y, npd_conf, npd_fill) in zip(npd["x"], npd["y"], npd["conf"], npd["fill"]):
+            if not npd_fill:
+                # 過去補填以外のみ通常出力
+                output_data["people"][0]["pose_keypoints_2d"].append(npd_x)
+                output_data["people"][0]["pose_keypoints_2d"].append(npd_y)
+                output_data["people"][0]["pose_keypoints_2d"].append(npd_conf)
+            else:
+                # 過去補填情報は無視
+                output_data["people"][0]["pose_keypoints_2d"].append(0)
+                output_data["people"][0]["pose_keypoints_2d"].append(0)
+                output_data["people"][0]["pose_keypoints_2d"].append(0)
 
         # 指定ありの場合、メッセージ追加
         reverse_specific_str = ""
@@ -643,8 +656,9 @@ def save_image(_idx, pred_image_ary, frame_img, number_people_max, sorted_idxs, 
         # 散布図のようにして、出力に使ったポイントを明示
         DEPTH_COLOR = ["#33FF33", "#3333FF", "#FFFFFF", "#FFFF33", "#FF33FF", "#33FFFF", "#00FF00", "#0000FF", "#666666", "#FFFF00", "#FF00FF", "#00FFFF"]
         for _eidx, npd in enumerate(now_pattern_datas):
-            for (npd_x, npd_y) in zip(npd["x"], npd["y"]):
-                plt.scatter(npd_x * scale, npd_y * scale, s=5, c=DEPTH_COLOR[_eidx])
+            for (npd_x, npd_y, npd_fill) in zip(npd["x"], npd["y"], npd["fill"]):
+                if not npd_fill:
+                    plt.scatter(npd_x * scale, npd_y * scale, s=5, c=DEPTH_COLOR[_eidx])
 
         plotName = "{0}/depth_{1:012d}.png".format(subdir, cnt)
         plt.savefig(plotName)
