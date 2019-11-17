@@ -34,9 +34,14 @@ set OPENPOSE_JSON="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\03\ivory\ivory_
 set PAST_DEPTH_PATH="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\03\ivory\ivory_20191112_044054\ivory_json_20191113_041232_depth"
 set NUMBER_PEOPLE_MAX=3
 
+set INPUT_VIDEO="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\05\goast\goast.mp4"
+set OPENPOSE_JSON="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\05\goast\goast_20191112_021708\goast_json"
+set PAST_DEPTH_PATH="E:\MMD\MikuMikuDance_v926x64\Work\201805_auto\05\goast\goast_20191112_021708\goast_json_20191113_013115_depth"
+set NUMBER_PEOPLE_MAX=5
+
 
 set DEPTH_INTERVAL=20
-set FRAME_END=-1
+set FRAME_END=1000
 set REVERSE_SPECIFIC_LIST=
 set ORDER_SPECIFIC_LIST=
 set AVI_OUTPUT=yes
