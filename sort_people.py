@@ -28,6 +28,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
 
     # 前回情報
     past_pattern_datas = [{} for x in range(number_people_max)]
+    past_pattern_datas = [{} for x in range(number_people_max)]
     past_sorted_idxs = [x for x in range(number_people_max)]
 
     cnt = 0
@@ -69,7 +70,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
         frame_img = np.array(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), dtype=np.float32)
 
         # 前フレームと出来るだけ近い位置のINDEX順番を計算する
-        sorted_idxs, now_pattern_datas, normal_pattern_datas = calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth_ary[_idx], pred_depth_support_ary[_idx], pred_conf_ary[_idx], pred_conf_support_ary[_idx], frame_img, past_sorted_idxs)
+        sorted_idxs, now_pattern_datas = calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, number_people_max, past_pattern_datas, data, pred_depth_ary[_idx], pred_depth_support_ary[_idx], pred_conf_ary[_idx], pred_conf_support_ary[_idx], frame_img, past_sorted_idxs)
 
         # 出力する
         output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_pattern_datas, json_path, now_str, file_name, reverse_specific_dict, order_specific_dict)
@@ -77,8 +78,8 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
         # 画像保存
         save_image(_idx, pred_image_ary, frame_img, number_people_max, sorted_idxs, now_pattern_datas, subdir, cnt, png_lib, scale, verbose)
 
-        # 今回ノーマル分を前回分に置き換え
-        past_pattern_datas = normal_pattern_datas
+        # 今回分を前回分に置き換え
+        past_pattern_datas = now_pattern_datas
         # 前回のソート順を保持
         past_sorted_idxs = sorted_idxs
 
@@ -126,7 +127,7 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             now_pattern_datas[_pidx]["conf_support"] = pred_conf_support[_pidx]
 
         # 前回データはそのまま
-        return sorted_idxs, now_pattern_datas, now_pattern_datas
+        return sorted_idxs, now_pattern_datas
     else:
         # ソートのための準備
         pattern_datas = prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, pred_conf, pred_conf_support, frame_img, past_sorted_idxs, past_pattern_datas)
@@ -137,10 +138,10 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             order_sorted_idxs = order_specific_dict[_idx]
 
         # 再頻出INDEXを算出
-        return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs)
+        return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img)
 
 # ソート順と向きを求める
-def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs):
+def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img):
     # ソート結果
     sorted_idxs = [-1 for _ in range(number_people_max)]
     # sorted_in_idxs = [-1 for _ in range(number_people_max)]
@@ -158,7 +159,7 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
                 sorted_idxs[_eidx] = now_sidx
         else:
             # 現在データを基準にソート順を求める
-            sorted_idxs, sorted_exists = calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 0.01, 0.65, [0.65, 0.35])
+            sorted_idxs, sorted_exists = calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 0.25, 0.4, [0.6, 0.4])
             
             # まだないINDEXの情報
             not_existed_idxs = [x for x in sorted_exists if x["exists"] == False]
@@ -175,60 +176,114 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
                         break
                         
             elif len(not_existed_idxs) > 1:
-                # 分かんないのが2件以上の場合、過去データから振り分ける
+                # 分かんないのが2件以上の場合、過去データから補完して再度チェック
 
                 # 最終的に追加設定したいINDEX
                 target_not_existed_idxs = [x for x in range(number_people_max) if x not in sorted_idxs]
+                # 追加設定したいINDEXに相当する過去データ
+                target_past_idxs = [(e, x, get_nearest_idxs(sorted_idxs, -1)[e]) for e, x in enumerate(target_not_existed_idxs)]
+                sorted_target_past_idxs = sorted(target_past_idxs, key=lambda x: x[2])
 
-                # 一度足りないトコを埋めたSINDEXを生成
-                fill_sorted_idxs = copy.deepcopy(sorted_idxs)
-                _nidx = 0
-                for _eidx, (tneidx, nei) in enumerate(zip(target_not_existed_idxs, not_existed_idxs)):
-                    if fill_sorted_idxs[nei["eidx"]] < 0 and tneidx not in fill_sorted_idxs:
-                        fill_sorted_idxs[nei["eidx"]] = tneidx
+                # for _eidx, tne_idx in enumerate(target_not_existed_idxs):
+                #     # -1が入っているINDEX
+                #     now_sidx = get_nearest_idxs(sorted_idxs, -1)[_eidx]
 
-                # 並べ直したSIDX
-                nearest_fill_sorted_idxs = [get_nearest_idxs(fill_sorted_idxs, e)[0] for e in range(number_people_max)]
+                #     for _oidx in range(4):
+                #         pd = pattern_datas[now_sidx*4+_oidx]
+                #         ppd = past_pattern_datas[_eidx]
+                #         for _didx in range(len(pd["conf"])):
+                #             if pd["conf"][_didx] <= 0:
+                #                 for dimensional in ["x","y","depth"]:
+                #                     # 信頼度が全くない場合、過去データで埋める（信頼度は下げる）
+                #                     pd[dimensional][_didx] = ppd[dimensional][_didx]
+                #                 pd["conf"][_didx] = ppd["conf"][_didx] * 0.8
+                #                 pd["fill"][_didx] = True
 
                 # 過去データの前回のINDEXに相当するデータを生成
                 limit_pattern_datas = [{} for x in range(len(not_existed_idxs) * 4)]
                 limit_past_pattern_datas = [{} for x in range(len(not_existed_idxs))]
-                # 過去データの再チェック対象INDEXリスト(0: 順番, 1: 直近IDX順番)
-                past_not_existed_idxs = [(e, get_nearest_idxs(nearest_fill_sorted_idxs, e)[0]) for e, n in enumerate(not_existed_idxs)]
-                sorted_past_not_existed_idxs = sorted(past_not_existed_idxs, key=lambda x: x[1])
 
-                for _eidx, (pnei, spnei) in enumerate(zip(past_not_existed_idxs, sorted_past_not_existed_idxs)):
-                    # 並べ直したSIDXから前回INDEXを取得
-                    
+                for _eidx, (tp_idx, stp_idx) in enumerate(zip(target_past_idxs, sorted_target_past_idxs)):
+                    # -1が入っているINDEX
+                    # now_sidx = get_nearest_idxs(sorted_idxs, -1)[_eidx]
+                    now_sidx = stp_idx[2]
+                    # 対象過去データ
+                    ppd = past_pattern_datas[tp_idx[1]]
+                    logger.debug("now_sidx: %s", now_sidx)
+
                     # 今回用データ
                     for op_idx in range(4):
-                        limit_pattern_datas[_eidx*4+op_idx] = copy.deepcopy(past_pattern_datas[pnei[1]])
+                        pd = copy.deepcopy(pattern_datas[now_sidx*4+op_idx])
+
+                        for _didx in range(len(pd["conf"])):
+                            # 過去データで埋める（信頼度は下げる）
+                            if np.mean(pd["conf"]) < 0.01 and np.median(pd["conf"]) <= 0.0:
+                                for dimensional in ["x","y","depth"]:
+                                    pd[dimensional][_didx] = ppd[dimensional][_didx]
+                                pd["conf"][_didx] = ppd["conf"][_didx] * 0.9
+                                pd["fill"][_didx] = True
+
+                        pd["eidx"] = _eidx
+
+                        limit_pattern_datas[_eidx*4+op_idx] = pd
 
                     # 前回データ
-                    limit_past_pattern_datas[spnei[0]] = copy.deepcopy(past_pattern_datas[pnei[1]])
+                    limit_past_pattern_datas[_eidx] = copy.deepcopy(past_pattern_datas[tp_idx[1]])
+
+                # # 一度足りないトコを埋めたSINDEXを生成
+                # fill_sorted_idxs = copy.deepcopy(sorted_idxs)
+                # _nidx = 0
+                # for _eidx, (tneidx, nei) in enumerate(zip(target_not_existed_idxs, not_existed_idxs)):
+                #     if fill_sorted_idxs[nei["eidx"]] < 0 and tneidx not in fill_sorted_idxs:
+                #         fill_sorted_idxs[nei["eidx"]] = tneidx
+
+                # # 並べ直したSIDX
+                # nearest_fill_sorted_idxs = [get_nearest_idxs(fill_sorted_idxs, e)[0] for e in range(number_people_max)]
+
+                # # 過去データの前回のINDEXに相当するデータを生成
+                # limit_pattern_datas = [{} for x in range(len(not_existed_idxs) * 4)]
+                # limit_past_pattern_datas = [{} for x in range(len(not_existed_idxs))]
+                # # 過去データの再チェック対象INDEXリスト(0: 順番, 1: 直近IDX順番)
+                # past_not_existed_idxs = [{"eidx": e, "tidx": t, "sidx": get_nearest_idxs(nearest_fill_sorted_idxs, t)[0]} for e, (n, t) in enumerate(zip(not_existed_idxs, target_not_existed_idxs))]
+                # sorted_past_not_existed_idxs = sorted(past_not_existed_idxs, key=lambda x: x["sidx"])
+
+                # for _eidx, (pnei, spnei) in enumerate(zip(past_not_existed_idxs, sorted_past_not_existed_idxs)):
+                #     # 並べ直したSIDXから前回INDEXを取得
+                    
+                #     # 今回用データ
+                #     for op_idx in range(4):
+                #         limit_pattern_datas[_eidx*4+op_idx] = copy.deepcopy(past_pattern_datas[pnei["sidx"]])
+
+                #     # 前回データ
+                #     limit_past_pattern_datas[spnei["sidx"]] = copy.deepcopy(past_pattern_datas[pnei["sidx"]])
 
                 # 過去データを基準にソート順を求める
-                limit_sorted_idxs, limit_sorted_exists = calc_sort_frame(_idx, number_people_max, limit_past_pattern_datas, limit_pattern_datas, 0.01, 0.65, [0.65, 0.35, 0.0])
+                limit_sorted_idxs, limit_sorted_exists = calc_sort_frame(_idx, number_people_max, limit_past_pattern_datas, limit_pattern_datas, 0.0, 0.4, [0.3, 0.01])
                 
-                for _eidx, (ls_idx, nei) in enumerate(zip(limit_sorted_idxs, not_existed_idxs)):
-                    if sorted_idxs[nei["eidx"]] < 0 and target_not_existed_idxs[ls_idx] not in sorted_idxs:
-                        sorted_idxs[nei["eidx"]] = target_not_existed_idxs[ls_idx]
+                logger.debug("limit_sorted_idxs: %s", limit_sorted_idxs)
+
+                for _eidx, (ls_idx, stp_idx) in enumerate(zip(limit_sorted_idxs, sorted_target_past_idxs)):
+                    if ls_idx >= 0 and sorted_idxs[stp_idx[2]] < 0 and sorted_target_past_idxs[ls_idx][1] not in sorted_idxs:
+                        sorted_idxs[stp_idx[2]] = sorted_target_past_idxs[ls_idx][1]
+                        sorted_exists[stp_idx[2]] = {"eidx": stp_idx[1], "sidx": sorted_target_past_idxs[ls_idx][1], "exists": True}
 
         # 存在しないINDEXを再度数える
         not_existed_idxs = [x for x in sorted_exists if x["exists"] == False]
+        # 最終的に追加設定したいINDEX
+        target_not_existed_idxs = [x for x in range(number_people_max) if x not in sorted_idxs]
 
         if len(not_existed_idxs) > 0:
             # まだ値がない場合、まだ埋まってないのを先頭から
             _nidx = 0
             for _eidx in range(number_people_max):
                 if sorted_idxs[_eidx] < 0:
-                    sorted_idxs[_eidx] = not_existed_idxs[_nidx]["eidx"]
+                    sorted_idxs[_eidx] = target_not_existed_idxs[_nidx]
                     _nidx += 1
 
         logger.debug("_idx: %s, sorted_idxs: %s", _idx, sorted_idxs)
 
     # 人物INDEXが定まったところで、向きを再確認する
-    now_pattern_datas = calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, sorted_idxs, 0.1, 0.5)
+    now_pattern_datas = calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, sorted_idxs, frame_img, 0.1, 0.5)
     # ノーマルパターン結果
     normal_pattern_datas = [[] for x in range(len(past_pattern_datas))]
 
@@ -253,28 +308,23 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
 
                     now_pattern_datas[_eidx] = pattern_datas[now_sidx*4+pattern_type]
 
-        # 前回用にノーマルパターン保持
-        normal_pattern_datas[_eidx] = pattern_datas[now_sidx*4]
-    
     # ノーマルパターンに過去データ引継
     if _idx > 0:
-        for (npd, ppd) in zip(normal_pattern_datas, past_pattern_datas):
-            for _didx in range(len(npd["conf"])):
-                if npd["conf"][_didx] <= 0:
+        for _eidx, (npd, ppd) in enumerate(zip(now_pattern_datas, past_pattern_datas)):
+            logger.debug("npd: %s", npd)
+            if np.mean(npd["conf"]) < 0.2 and np.median(npd["conf"]) < 0.1:
+                for _didx in range(len(npd["conf"])):
                     for dimensional in ["x","y","depth"]:
                         # 信頼度が全くない場合、過去データで埋める（信頼度は下げる）
                         npd[dimensional][_didx] = ppd[dimensional][_didx]
-                    npd["conf"][_didx] = ppd["conf"][_didx] * 0.8
+                    npd["conf"][_didx] = ppd["conf"][_didx] * 0.9
                     npd["fill"][_didx] = True
 
-    for npd in now_pattern_datas:
-        logger.debug("_idx: %s, now_pattern_datas: pidx: %s, in_idx: %s, pattern: %s", _idx, npd["pidx"], npd["in_idx"], npd["pattern"])
-
-    return sorted_idxs, now_pattern_datas, normal_pattern_datas
+    return sorted_idxs, now_pattern_datas
 
 
 # 指定された方向（x, y, depth, color）に沿って、向きを計算する
-def calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, sorted_idxs, th, most_th):
+def calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, sorted_idxs, frame_img, th, most_th):
     # 今回のパターン結果
     now_pattern_datas = [[] for x in range(len(past_pattern_datas))]
     # 0F目のSINDEXリスト
@@ -289,71 +339,110 @@ def calc_direction_frame(_idx, number_people_max, past_pattern_datas, pattern_da
         # 最頻出INDEX
         most_common_idxs = []
 
-        for _didx, dimensional in enumerate(["xy","x","y"]):
-            for _jidx in range(14):
-                # 今回の該当関節データリスト
-                now_per_joint_data = []
-                now_per_joint_conf = []
-                for _pidx, pt_data in enumerate(pattern_datas[now_sidx*4:now_sidx*4+4]):
-                    # 該当辺の該当関節値を設定
-                    if dimensional == "xy":
-                        now_per_joint_data.append(np.array([pt_data["x"][_jidx],pt_data["y"][_jidx]]))
+        # 足が同一方向で算出されている場合、TRUE
+        is_leg_same_direction = False
+        # 足が付け根と反転している場合、TRUE
+        is_leg_reverse = False
+        # 前回データと今回データをチェック
+        for pd in [past_pattern_datas[_eidx], pattern_datas[now_sidx*4]]:
+            for (lidx, ridx) in [(8,11), (9,12), (10,13)]:
+                if abs(pd["x"][lidx] - pd["x"][ridx]) < frame_img.shape[1] / 100:
+                    is_leg_same_direction = True
+
+            # 前回足が付け根と反転している場合、TRUE
+            if pd["conf"][8] >= 0.1 and pd["x"][11] >= 0.1 and pd["conf"][9] >= 0.1 and pd["x"][12] >= 0.1 and \
+                np.sign(pd["x"][8] - pd["x"][11]) != np.sign(pd["x"][9] - pd["x"][12]):
+                    is_now_leg_reverse = True
+
+        if is_leg_same_direction or is_leg_reverse:
+            # 足がほとんど同じ位置にあるか、足が付け根と反転している場合、回転なしで取得
+            now_pattern_datas[_eidx] = pattern_datas[now_sidx*4]
+            now_pattern_datas[_eidx]["sidx"] = now_sidx
+        else:
+            for _didx, dimensional in enumerate(["x","y"]):
+                for _jidx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,8,11,8,11]:
+                    # 今回の該当関節データリスト
+                    now_per_joint_data = []
+                    now_per_joint_conf = []
+                    for _pidx, pt_data in enumerate(pattern_datas[now_sidx*4:now_sidx*4+4]):
+                        if pt_data["conf"][_jidx] >= th:
+                            # 該当辺の該当関節値を設定
+                            if dimensional == "xy":
+                                now_per_joint_data.append(np.array([pt_data["x"][_jidx],pt_data["y"][_jidx]]))
+                            else:
+                                now_per_joint_data.append(pt_data[dimensional][_jidx])
+                            now_per_joint_conf.append(pt_data["conf"][_jidx])
+                        else:
+                            # 信頼度が足りない場合、前回データ設定
+                            # 該当辺の該当関節値を設定
+                            if dimensional == "xy":
+                                now_per_joint_data.append(np.array([past_pattern_datas[_eidx]["x"][OP_PATTERNS[_pidx][_jidx]],past_pattern_datas[_eidx]["y"][OP_PATTERNS[_pidx][_jidx]]]))
+                            else:
+                                now_per_joint_data.append(past_pattern_datas[_eidx][dimensional][OP_PATTERNS[_pidx][_jidx]])
+                            now_per_joint_conf.append(past_pattern_datas[_eidx]["conf"][OP_PATTERNS[_pidx][_jidx]])
+
+                    if past_pattern_datas[_eidx]["conf"][_jidx] >= th:
+                        # 信頼度が足りてる場合、前回のチェック対象関節値    
+                        if dimensional == "xy":
+                            # XY座標の場合は組合せでチェック
+                            past_per_joint_value = np.array([past_pattern_datas[_eidx]["x"][_jidx],past_pattern_datas[_eidx]["y"][_jidx]])
+                            nearest_idx = get_nearest_idx_ary(now_per_joint_data, past_per_joint_value, now_per_joint_conf, th)
+                        else:
+                            past_per_joint_value = past_pattern_datas[_eidx][dimensional][_jidx]
+                            nearest_idx = get_nearest_idxs(now_per_joint_data, past_per_joint_value, now_per_joint_conf, th)
+
+                        if 0 < len(nearest_idx) < len(now_per_joint_conf):
+                            # 偏向して近似INDEXがある場合、そのまま追加
+                            now_nearest_idxs.extend(nearest_idx)
+                        elif 0 < len(nearest_idx) and len(nearest_idx) == len(now_per_joint_conf):
+                            # 全部同じ数の場合、最小INDEXのみ追加
+                            now_nearest_idxs.append(min(nearest_idx))
                     else:
-                        now_per_joint_data.append(pt_data[dimensional][_jidx])
-                    now_per_joint_conf.append(pt_data["conf"][_jidx])
+                        # 足りてない場合、あり得ない値
+                        now_nearest_idxs.append(-1)
 
-                if past_pattern_datas[_eidx]["conf"][_jidx] >= th:
-                    # 信頼度が足りてる場合、前回のチェック対象関節値    
-                    if dimensional == "xy":
-                        # XY座標の場合は組合せでチェック
-                        past_per_joint_value = np.array([past_pattern_datas[_eidx]["x"][_jidx],past_pattern_datas[_eidx]["y"][_jidx]])
-                        nearest_idx = get_nearest_idx_ary(now_per_joint_data, past_per_joint_value, now_per_joint_conf, th)
-                    else:
-                        past_per_joint_value = past_pattern_datas[_eidx][dimensional][_jidx]
-                        nearest_idx = get_nearest_idxs(now_per_joint_data, past_per_joint_value, now_per_joint_conf, th)
+                if len(now_nearest_idxs) > 0:
+                    most_common_idxs = Counter(now_nearest_idxs).most_common()
 
-                    if 0 < len(nearest_idx) < len(now_per_joint_conf):
-                        # 偏向して近似INDEXがある場合、そのまま追加
-                        now_nearest_idxs.extend(nearest_idx)
-                    elif 0 < len(nearest_idx) and len(nearest_idx) == len(now_per_joint_conf):
-                        # 全部同じ数の場合、最小INDEXのみ追加
-                        now_nearest_idxs.append(min(nearest_idx))
-                else:
-                    # 足りてない場合、あり得ない値
-                    now_nearest_idxs.append(-1)
+                    most_common_cnt = 0
+                    for mci in most_common_idxs:
+                        most_common_cnt += mci[1]
 
-            if len(now_nearest_idxs) > 0:
-                most_common_idxs = Counter(now_nearest_idxs).most_common()
-                # 件数の入ってるのだけ拾う
-                most_common_idxs = [mci for mci in most_common_idxs if mci[0] >= 0]
+                    # 件数の入ってるのだけ拾う
+                    most_common_idxs = [mci for mci in most_common_idxs if mci[0] >= 0]
 
-                most_common_cnt = 0
-                for mci in most_common_idxs:
-                    most_common_cnt += mci[1]
+                    # 頻出で振り分けた後、件数が足りない場合（全部どれか1つに寄せられている場合)
+                    if len(most_common_idxs) < len(past_pattern_datas):
+                        for c in range(len(past_pattern_datas)):
+                            is_existed = False
+                            for m, mci in enumerate(most_common_idxs):
+                                if c == most_common_idxs[m][0]:
+                                    is_existed = True
+                                    break
+                            
+                            if is_existed == False:
+                                # 存在しないインデックスだった場合、追加                 
+                                most_common_idxs.append( (c, 0) )
+                    
+                    if most_common_cnt > 0:
+                        most_common_per = most_common_idxs[0][1] / most_common_cnt
+                        if most_common_idxs[0][0] >= 0 and most_common_per >= most_th - (_didx * 0.1):
+                            # 再頻出INDEXが有効で、再頻出INDEXの出現数が全体の既定割合を超えていれば終了
+                            break
+                            
+            op_direction = most_common_idxs[0][0]
 
-                if most_common_cnt > 0:
-                    most_common_per = most_common_idxs[0][1] / most_common_cnt
-                    if most_common_idxs[0][0] >= 0 and most_common_per >= most_th - (_didx * 0.1):
-                        # 再頻出INDEXが有効で、再頻出INDEXの出現数が全体の既定割合を超えていれば終了
-                        break
-            
-        # 頻出で振り分けた後、件数が足りない場合（全部どれか1つに寄せられている場合)
-        if len(most_common_idxs) < len(past_pattern_datas):
-            for c in range(len(past_pattern_datas)):
-                is_existed = False
-                for m, mci in enumerate(most_common_idxs):
-                    if c == most_common_idxs[m][0]:
-                        is_existed = True
-                        break
+            if op_direction in [2, 3]:
+                # 上半身または下半身のみ反転の場合
+                pd = pattern_datas[now_sidx*4+op_direction]
                 
-                if is_existed == False:
-                    # 存在しないインデックスだった場合、追加                 
-                    most_common_idxs.append( (c, 0) )
-        
-        now_pattern_datas[_eidx] = pattern_datas[now_sidx*4+most_common_idxs[0][0]]
-        now_pattern_datas[_eidx]["sidx"] = now_sidx
-        now_pattern_datas[_eidx]["sidx2"] = get_nearest_idxs(sorted_idxs, _eidx)[0]
-        now_pattern_datas[_eidx]["sidx3"] = get_nearest_idxs(sorted_idxs, now_sidx)[0]
+                if np.sign(pd["x"][1] - np.median(pd["x"][2:4])) != np.sign(pd["x"][1] - np.median(pd["x"][8:10])) or \
+                    np.sign(pd["x"][1] - np.median(pd["x"][5:7])) != np.sign(pd["x"][1] - np.median(pd["x"][11:13])):
+                    # 上下で右半身と左半身の符号が違う場合、反転クリア
+                    op_direction = 0
+                
+            now_pattern_datas[_eidx] = pattern_datas[now_sidx*4+op_direction]
+            now_pattern_datas[_eidx]["sidx"] = now_sidx
 
     return now_pattern_datas
 
@@ -372,6 +461,13 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
     sorted_idxs = [-1 for _ in range(now_number_people_max)]
 
     for _eidx, pd in enumerate(pattern_datas):
+        # 直近INDEX
+        now_nearest_idxs = []
+        # 最頻出INDEX
+        most_common_idxs = []
+        # 再頻出INDEXの割合
+        most_common_per = 0
+
         pd_confs = []
 
         for _jidx in range(18):
@@ -379,15 +475,8 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
             pd_confs.append(pd["conf"][_jidx])
 
         for _didx, dimensional in enumerate(["x", "depth", "y", "depth_support", "color"]):
-            # 直近INDEX
-            now_nearest_idxs = []
-            # 最頻出INDEX
-            most_common_idxs = []
-            # 再頻出INDEXの割合
-            most_common_per = 0
-
             # 範囲を限定する（深度補佐は全部）
-            jidx_rng = [0,1,2,3,5,6,8,9,10,11,12,13,1,8,11,1,8,11] if dimensional != "depth_support" else range(len(pd[dimensional]))
+            jidx_rng = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,1,8,11,1,8,11,1,8,11] if dimensional in ["x", "depth", "y"] else range(len(pd[dimensional]))
             for _jidx in jidx_rng:
                 # 前回の該当関節データ
                 past_per_joint_data = []
@@ -417,22 +506,29 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
                     per_joint_value = pd[dimensional][_jidx]
 
                 if dimensional in ["xyd", "xd", "xy", "color"]:
-                    if pd["conf"][_jidx] > 0:
+                    if pd["conf"][_jidx] > th:
                         # XY座標と色の場合は組合せでチェック
                         now_nearest_idxs.extend(get_nearest_idx_ary(past_per_joint_data, per_joint_value, past_per_joint_conf, th))
                     else:
                         # 足りてない場合、あり得ない値
                         now_nearest_idxs.append(-1)
                 else:
-                    if pd["conf"][_jidx] > 0:
+                    if pd["conf"][_jidx] > th:
                         # 信頼度が足りてる場合、直近のINDEXを取得
                         now_nearest_idxs.extend(get_nearest_idxs(past_per_joint_data, per_joint_value, past_per_joint_conf, th))
+                        logger.debug("now_nearest_idxs: %s", now_nearest_idxs)
                     else:
                         # 足りてない場合、あり得ない値
                         now_nearest_idxs.append(-1)
 
             if len(now_nearest_idxs) > 0:
                 most_common_idxs = Counter(now_nearest_idxs).most_common()
+                
+                most_common_cnt = 0
+                for mci in most_common_idxs:
+                    most_common_cnt += mci[1]
+
+                # 件数の入ってるのだけ拾う
                 most_common_idxs = [mci for mci in most_common_idxs if mci[0] >= 0]
                 
                 # 頻出で振り分けた後、件数が足りない場合（全部どれか1つに寄せられている場合)
@@ -448,58 +544,58 @@ def calc_sort_frame(_idx, number_people_max, past_pattern_datas, pattern_datas, 
                             # 存在しないインデックスだった場合、追加                 
                             most_common_idxs.append( (c, 0) )
                 
-                most_common_cnt = 0
-                for mci in most_common_idxs:
-                    most_common_cnt += mci[1]
-
                 if most_common_cnt > 0:
                     most_common_per = most_common_idxs[0][1] / most_common_cnt
                     if most_common_idxs[0][0] >= 0 and most_common_per >= most_th - (_didx * 0.1):
                         # 再頻出INDEXが有効で、再頻出INDEXの出現数が全体の既定割合を超えていれば終了
                         break
             
-        all_most_common_per.append({"_eidx": _eidx, "most_common_per": most_common_per, "most_common_idxs":most_common_idxs, "pd": pd, "pd_conf_avg": np.mean(pd_confs), "jidx_size": len(jidx_rng)})
+        all_most_common_per.append({"_eidx": _eidx, "most_common_per": most_common_per, "most_common_idxs":most_common_idxs, "pd": pd, "pd_conf_avg": np.mean(pd_confs), "pd_conf_median": np.median(pd_confs), "jidx_size": len(jidx_rng), "dimensional": dimensional})
 
-    # 4件全体の割合を計算
-    for _eidx in range(now_number_people_max):
-        sum_most_common_idxs = []
-        sum_jidx_size = 0
-        for _pidx in range(4):
-            for mci in all_most_common_per[_eidx*4+_pidx]["most_common_idxs"]:
-                for n in range(mci[1]):
-                    # 出現回数分登録
-                    sum_most_common_idxs.append(mci[0])
-            sum_jidx_size += all_most_common_per[_eidx*4+_pidx]["jidx_size"]
-        # 4件全体の出現頻出
-        if len(sum_most_common_idxs) > 0:
-            mci_sum_most_common_idxs = Counter(sum_most_common_idxs).most_common()
-            for _pidx in range(4):
-                # 全体出現平均を設定
-                all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = mci_sum_most_common_idxs[0][1] / sum_jidx_size
-        else:
-            for _pidx in range(4):
-                # 全体出現平均を設定
-                all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = 0
+    # # 4件全体の割合を計算
+    # for _eidx in range(now_number_people_max):
+    #     sum_most_common_idxs = []
+    #     sum_jidx_size = 0
+    #     for _pidx in range(4):
+    #         for mci in all_most_common_per[_eidx*4+_pidx]["most_common_idxs"]:
+    #             for n in range(mci[1]):
+    #                 # 出現回数分登録
+    #                 sum_most_common_idxs.append(mci[0])
+    #         sum_jidx_size += all_most_common_per[_eidx*4+_pidx]["jidx_size"]
+    #     # 4件全体の出現頻出
+    #     if len(sum_most_common_idxs) > 0:
+    #         mci_sum_most_common_idxs = Counter(sum_most_common_idxs).most_common()
+    #         for _pidx in range(4):
+    #             # 全体出現平均を設定
+    #             all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = mci_sum_most_common_idxs[0][1] / sum_jidx_size
+    #     else:
+    #         for _pidx in range(4):
+    #             # 全体出現平均を設定
+    #             all_most_common_per[_eidx*4+_pidx]["avg_most_common_per"] = 0
 
     # 全体平均の信頼度降順
-    sorted_all_most_common_per = sorted(all_most_common_per, key=lambda x: x["most_common_per"], reverse=True)
-    # 最終的な信頼度降順
-    sorted_all_avg_most_common_per = sorted(sorted_all_most_common_per, key=lambda x: x["avg_most_common_per"], reverse=True)
+    sorted_all_median = sorted(all_most_common_per, key=lambda x: x["pd_conf_median"], reverse=True)
+    # 全体平均の信頼度降順
+    sorted_all_most_common_per = sorted(sorted_all_median, key=lambda x: x["most_common_per"], reverse=True)
+    # # 最終的な信頼度降順
+    # sorted_all_avg_most_common_per = sorted(sorted_all_most_common_per, key=lambda x: x["avg_most_common_per"], reverse=True)
     
-    logger.debug("_idx: %s, sorted_all_avg_most_common_per: %s", _idx, sorted_all_avg_most_common_per)
+    logger.debug("_idx: %s, sorted_all_most_common_per: %s", _idx, sorted_all_most_common_per)
 
     # 信頼度降順の人物INDEX
     # 1番目から順に埋めていく
-    for pd_conf_avg_limit in choice_ths:
-        for _midx in range(now_number_people_max):
-            for _eidx, smc in enumerate(sorted_all_avg_most_common_per):
+    for _midx in range(now_number_people_max):
+        for pd_conf_avg_limit in choice_ths:
+            for _eidx, smc in enumerate(sorted_all_most_common_per):
                 # past_idx = past_pattern_datas[mci[_midx][0]]["pidx"]
                 most_idx = smc["most_common_idxs"][_midx][0]
+                most_cnt = smc["most_common_idxs"][_midx][1]
                 past_idx = smc["_eidx"] // 4
                 # past_pidx = past_pattern_datas[past_idx]["past_pidx"]
-                if most_idx not in sorted_idxs and sorted_idxs[past_idx] == -1 and smc["pd_conf_avg"] >= pd_conf_avg_limit:
+                if most_idx not in sorted_idxs and most_cnt > 0 and sorted_idxs[past_idx] == -1 and smc["pd_conf_median"] >= pd_conf_avg_limit:
                     # まだ設定されていないINDEXで、入れようとしている箇所が空で、かつ信頼度平均がリミット以上の場合、設定
                     sorted_idxs[past_idx] = most_idx
+                    logger.debug("sorted_idxs: %s", sorted_idxs)
                 
                 if -1 not in sorted_idxs:
                     # 埋まったら終了
@@ -601,6 +697,8 @@ OPENPOSE_REVERSE_ALL = {"pattern": "reverse", 0:0, 1:1, 2:5, 3:6, 4:7, 5:2, 6:3,
 OPENPOSE_REVERSE_UPPER = {"pattern": "up_reverse", 0:0, 1:1, 2:5, 3:6, 4:7, 5:2, 6:3, 7:4, 8:8, 9:9, 10:10, 11:11, 12:12, 13:13, 14:15, 15:14, 16:17, 17:16}
 # 下半身のみ左右反転させたINDEX
 OPENPOSE_REVERSE_LOWER = {"pattern": "low_reverse", 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:11, 9:12, 10:13, 11:8, 12:9, 13:10, 14:14, 15:15, 16:16, 17:17}
+# 反転あり情報リスト
+OP_PATTERNS = [OPENPOSE_NORMAL, OPENPOSE_REVERSE_ALL, OPENPOSE_REVERSE_UPPER, OPENPOSE_REVERSE_LOWER]
 
 # ソートのための準備
 # 人物データを、通常・全身反転・上半身反転・下半身反転の4パターンに分ける
@@ -608,7 +706,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
     pattern_datas = [{} for x in range(number_people_max * 4)]
 
     for _eidx, _pidx in enumerate(past_sorted_idxs):
-        for op_idx, op_idx_data in enumerate([OPENPOSE_NORMAL, OPENPOSE_REVERSE_ALL, OPENPOSE_REVERSE_UPPER, OPENPOSE_REVERSE_LOWER]):
+        for op_idx, op_idx_data in enumerate(OP_PATTERNS):
             in_idx = (_pidx * 4) + op_idx
 
             # パターン別のデータ
@@ -625,7 +723,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                 pattern_datas[in_idx]["y"][oidx] = now_xyc[op_idx_data[oidx]*3+1]
                 
                 # 信頼度調整値(キーと値が合ってない反転系は信頼度を少し下げる)
-                conf_tweak = 1.0 if oidx == op_idx_data[oidx] else 0.8
+                conf_tweak = 1.0 if oidx == op_idx_data[oidx] else 0.9
                 pattern_datas[in_idx]["conf"][oidx] = now_xyc[op_idx_data[oidx]*3+2] * conf_tweak
 
                 # 深度情報
@@ -647,22 +745,30 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             if np.isnan(pattern_datas[in_idx]["x_avg"]):
                 pattern_datas[in_idx]["x_avg"] = 0 
 
-            # 信頼度の平均値（無効なものも取り入れる）
-            pattern_datas[in_idx]["conf_avg"] = np.mean(pattern_datas[in_idx]["conf"])
-
             logger.debug(pattern_datas[in_idx])
 
         logger.debug(pattern_datas)
 
-    # ほぼ同じ位置で信頼度が著しく低いモノをクリア
+    # 信頼度が著しく低いモノをクリア
+    for _lidx, lpd in enumerate(pattern_datas):
+        if np.mean(lpd["conf"]) < 0.2 and np.median(lpd["conf"]) < 0.1:
+            if (np.mean(lpd["conf"]) != 0 or np.median(lpd["conf"]) != 0) and lpd["in_idx"] % 4 == 0:
+                file_logger.info("※※{0:05d}F目 信頼度低情報除外: eidx: {1}, 平均値: {2}, 中央値: {3}".format( _idx, lpd["eidx"], np.mean(lpd["conf"]), np.median(lpd["conf"]) ))
+            # パターン別の初期データで再設定
+            pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "pattern": lpd["pattern"], 
+                "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
+                "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0}
+
+    # ほぼ同じ位置で信頼度が低いモノをクリア
     for _lidx, lpd in enumerate(pattern_datas):
         for _hidx, hpd in enumerate(pattern_datas):
-            if lpd["pidx"] != hpd["pidx"] and abs(lpd["x_avg"] - hpd["x_avg"]) < frame_img.shape[1] / 100 and hpd["conf_avg"] > lpd["conf_avg"] and lpd["conf_avg"] < 0.2:
+            if lpd["pidx"] != hpd["pidx"] and abs(lpd["x"][1] - hpd["x"][1]) < frame_img.shape[1] / 30 and np.mean(hpd["conf"]) > np.mean(lpd["conf"]) and np.mean(lpd["conf"]) < 0.25:
+                if (np.mean(lpd["conf"]) != 0 or np.median(lpd["conf"]) != 0) and lpd["in_idx"] % 4 == 0:
+                    file_logger.info("※※{0:05d}F目 重複データ除外: eidx: {1}, 平均値: {2}, 中央値: {3}".format( _idx, lpd["eidx"], np.mean(lpd["conf"]), np.median(lpd["conf"]) ))
                 # パターン別の初期データで再設定
-                file_logger.info("※※{0:05d}F目 ほぼ重複データ除外: eidx: {1}, x_avg: {2}, conf_avg: {3}".format( _idx, lpd["eidx"], lpd["x_avg"], lpd["conf_avg"] ))
                 pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "pattern": lpd["pattern"], 
                     "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
-                    "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0, "conf_avg": 0}
+                    "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0}
                 break
 
     return pattern_datas
@@ -673,10 +779,10 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
     if _idx in order_specific_dict:
         file_logger.warning("※※{0:05d}F目、順番指定 [{0}:{2}]".format( _idx, _display_idx, ','.join(map(str, order_specific_dict[_idx]))))
 
-    display_sorted_idx = [-1 for _ in range(number_people_max)]
-    for _eidx, _sidx in enumerate(sorted_idxs):
-        now_sidx = get_nearest_idxs(sorted_idxs, _eidx)[0]
-        display_sorted_idx[now_sidx] = _eidx
+    display_sorted_idx = [x for x in range(number_people_max)]
+    # for _eidx, _sidx in enumerate(sorted_idxs):
+    #     now_sidx = get_nearest_idxs(sorted_idxs, _eidx)[0]
+    #     display_sorted_idx[now_sidx] = _eidx
 
     display_nose_pos = {}
     for _eidx, npd in enumerate(now_pattern_datas):
@@ -694,14 +800,14 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
         for (npd_x, npd_y, npd_conf, npd_fill) in zip(npd["x"], npd["y"], npd["conf"], npd["fill"]):
             if not npd_fill:
                 # 過去補填以外のみ通常出力
-                output_data["people"][0]["pose_keypoints_2d"].append(npd_x)
-                output_data["people"][0]["pose_keypoints_2d"].append(npd_y)
-                output_data["people"][0]["pose_keypoints_2d"].append(npd_conf)
+                output_data["people"][0]["pose_keypoints_2d"].append(np.round(npd_x, 4))
+                output_data["people"][0]["pose_keypoints_2d"].append(np.round(npd_y, 4))
+                output_data["people"][0]["pose_keypoints_2d"].append(np.round(npd_conf, 6))
             else:
                 # 過去補填情報は無視
-                output_data["people"][0]["pose_keypoints_2d"].append(0)
-                output_data["people"][0]["pose_keypoints_2d"].append(0)
-                output_data["people"][0]["pose_keypoints_2d"].append(0)
+                output_data["people"][0]["pose_keypoints_2d"].append(0.0)
+                output_data["people"][0]["pose_keypoints_2d"].append(0.0)
+                output_data["people"][0]["pose_keypoints_2d"].append(0.0)
 
         # 指定ありの場合、メッセージ追加
         reverse_specific_str = ""

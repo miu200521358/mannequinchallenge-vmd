@@ -20,7 +20,7 @@ from models import pix2pixdata_model
 import cv2
 import numpy as np
 from PIL import Image
-from skimage import transform
+from skimage import exposure, transform
 import imageio
 import os
 import logging
@@ -208,8 +208,8 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
             img = np.float32(img)/255.0
             # サイズを小さくする
             img = transform.resize(img, (height, width))
-            # # コントラストをあげる
-            # img = exposure.equalize_hist(img)
+            # コントラストをあげる
+            img = exposure.equalize_adapthist(img)
 
             img_list.append(img)
 
