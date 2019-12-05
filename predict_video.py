@@ -48,7 +48,7 @@ level = {0: logging.ERROR,
 # 入力値
 WIDTH = 512
 
-def predict_video(now_str, video_path, depth_path, past_depth_path, interval, json_path, number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, end_frame_no, verbose, opt):
+def predict_video(now_str, video_path, depth_path, past_depth_path, interval, json_path, number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, end_frame_no, order_start_frame, verbose, opt):
     # Windows用に追加
     torch.multiprocessing.freeze_support()
 
@@ -108,22 +108,30 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
     pred_conf_support_ary = np.zeros((json_size,number_people_max,17))
     # 人数分の深度画像データ
     pred_image_ary = [[] for x in range(json_size) ]
+    # 過去ソートデータ(pastはsort_peopleで使ってるのでprev)
+    prev_sorted_idxs = []
 
     # 深度用ファイル
     depthf_path = '{0}/depth.txt'.format(depth_path)
     # 信頼度用ファイル
     conff_path = '{0}/conf.txt'.format(depth_path)
+    # ソート順用ファイル
+    orderf_path = '{0}/order.txt'.format(depth_path)
 
     past_depthf_path = None
     past_conff_path = None
+    past_orderf_path = None
     if past_depth_path is not None:
         past_depthf_path = '{0}/depth.txt'.format(past_depth_path)
         past_conff_path = '{0}/conf.txt'.format(past_depth_path)
+        past_orderf_path = '{0}/order.txt'.format(past_depth_path)
 
     logger.info("past_depthf_path: %s", past_depthf_path)
     logger.info("past_conff_path: %s", past_conff_path)
+    logger.info("past_orderf_path: %s", past_orderf_path)
 
-    if past_depthf_path is not None and os.path.exists(past_depthf_path) and  past_conff_path is not None and os.path.exists(past_conff_path):
+    if past_depthf_path is not None and os.path.exists(past_depthf_path) and  past_conff_path is not None and os.path.exists(past_conff_path) and \
+        (order_start_frame == 0 or(order_start_frame > 0 and past_orderf_path is not None and os.path.exists(past_orderf_path))):
         # 深度ファイルが両方ある場合、それを読み込む
 
         # ----------------------
@@ -179,6 +187,57 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
         
         # 自分の信頼度情報ディレクトリにコピー
         shutil.copyfile(past_conff_path, conff_path)
+
+        if order_start_frame > 0:
+            # ソート開始フレームが指定されている場合、そこまで読み込む
+
+            # ----------------------
+            porderf = open(past_orderf_path, 'r')
+
+            n = 0
+            # カンマ区切りなので、csvとして読み込む
+            reader = csv.reader(porderf)
+
+            for row in reader:
+                if (n < order_start_frame):
+                    prev_sorted_idxs.append([int(x) for x in row])
+                else:
+                    break
+                n += 1
+
+            with open(orderf_path, 'w', newline='') as f:
+                csv.writer(f).writerows(prev_sorted_idxs)
+                            
+            for _eidx in range(number_people_max):
+                # INDEX別情報をまるっとコピー
+                past_idx_path = past_depth_path.replace('depth', 'idx{0:02d}'.format(_eidx+1))
+                idx_path = '{0}/{1}_{3}_idx{2:02d}'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+                # 既に出来ているので一旦削除
+                shutil.rmtree(idx_path)
+                shutil.copytree(past_idx_path, idx_path)
+
+                # 深度データと信頼度データを必要行まで上書き
+                depth_idx_path = '{0}/{1}_{3}_idx{2:02d}/depth.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+                
+                with open(depth_idx_path, 'r') as f:
+                    lines = f.readlines()
+                    lines = lines[:order_start_frame]
+
+                with open(depth_idx_path, 'w') as f:
+                    f.write(''.join(lines))
+
+                conf_idx_path = '{0}/{1}_{3}_idx{2:02d}/conf.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+
+                with open(conf_idx_path, 'r') as f:
+                    lines = f.readlines()
+                    lines = lines[:order_start_frame]
+
+                with open(depth_idx_path, 'w') as f:
+                    f.write(''.join(lines))
+                
+                logger.warning("過去データコピー idx: %s", _eidx+1)
+
+            porderf.close()
     else:                
         # 動画を1枚ずつ画像に変換する
         in_idx = 0
@@ -405,7 +464,7 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
     pred_depth_ary, pred_depth_support_ary = recalc_depth(pred_depth_ary, pred_depth_support_ary)
 
     # 人物ソート
-    sort_people.exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, verbose)
+    sort_people.exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_support_ary, pred_image_ary, video_path, now_str, subdir, json_path, json_size, number_people_max, reverse_specific_dict, order_specific_dict, start_json_name, start_frame, end_frame_no, org_width, org_height, png_lib, scale, prev_sorted_idxs, verbose)
 
     if is_avi_output:
         # MMD用背景AVI出力
@@ -693,6 +752,9 @@ def main():
                             order_specific_dict[f] = []
 
                             for person_idx in frame.split(':')[1].split(','):
+                                if int(person_idx) in order_specific_dict[int(frames)]:
+                                    logger.error("×順番指定リストに同じINDEXが指定されています。処理を中断します。 %s", frame)
+                                    return False
                                 order_specific_dict[f].append(int(person_idx))
                 else:        
                     if frames not in order_specific_dict:
@@ -700,6 +762,9 @@ def main():
                         order_specific_dict[int(frames)] = []
 
                         for person_idx in frame.split(':')[1].split(','):
+                            if int(person_idx) in order_specific_dict[int(frames)]:
+                                logger.error("×順番指定リストに同じINDEXが指定されています。処理を中断します。 %s", frame)
+                                return False
                             order_specific_dict[int(frames)].append(int(person_idx))
 
         logger.warning("順番指定リスト: %s", order_specific_dict)
@@ -709,7 +774,7 @@ def main():
         paramf.close()
 
     # Predict the image
-    predict_video(now_str, opt.video_path, depth_path, past_depth_path, interval, opt.json_path, opt.number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, opt.end_frame_no, opt.verbose, opt)
+    predict_video(now_str, opt.video_path, depth_path, past_depth_path, interval, opt.json_path, opt.number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, opt.end_frame_no, opt.order_start_frame, opt.verbose, opt)
 
     logger.debug("Done!!")
     logger.debug("深度推定結果: {0}".format(depth_path +'/depth.txt'))

@@ -69,5 +69,6 @@ class TrainVmdOptions(BaseOptions):
         self.parser.add_argument('--reverse_specific', dest='reverse_specific', help='reverse_specific', default="", type=str)
         self.parser.add_argument('--order_specific', dest='order_specific', help='order_specific', default="", type=str)
         self.parser.add_argument('--end_frame_no', dest='end_frame_no', help='end_frame_no', default=-1, type=int)
+        self.parser.add_argument('--order_start_frame', dest='order_start_frame', help='order_start_frame', default=0, type=int)
         self.parser.add_argument('--avi_output', dest='avi_output', help='avi_output', default='yes', type=str)
         self.parser.add_argument('--verbose', dest='verbose', help='verbose', type=int)
