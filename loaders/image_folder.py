@@ -280,3 +280,32 @@ class DAVISImageFolder(data.Dataset):
 
     def __len__(self):
         return len(self.img_list)
+
+
+
+class DAVISImageCapture(data.Dataset):
+
+    def __init__(self, img_list):
+        if not img_list or len(img_list) == 0:
+            raise(RuntimeError('Found 0 images'))
+        self.img_list = img_list
+
+        self.resized_height = 288
+        self.resized_width = 512
+
+        self.use_pp = True
+
+    def __getitem__(self, index):
+        targets_1 = {}
+
+        img = self.img_list[index]
+
+        final_img = torch.from_numpy(np.ascontiguousarray(
+            img).transpose(2, 0, 1)).contiguous().float()
+
+        targets_1['img_1_path'] = ""
+
+        return final_img, targets_1
+
+    def __len__(self):
+        return len(self.img_list)

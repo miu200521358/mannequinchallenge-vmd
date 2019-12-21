@@ -18,6 +18,17 @@ import torch.optim as optim
 import torch.autograd as autograd
 import numpy as np
 import functools
+import logging
+
+
+# ファイル出力ログ用
+file_logger = logging.getLogger("message").getChild(__name__)
+logger = logging.getLogger("__main__").getChild(__name__)
+
+level = {0: logging.ERROR,
+            1: logging.WARNING,
+            2: logging.INFO,
+            3: logging.DEBUG}
 
 ###############################################################################
 # Functions
@@ -73,7 +84,7 @@ def init_weights(net, init_type='normal', gain=0.02):
             nn.init.normal_(m.weight.data, 1.0, gain)
             nn.init.constant_(m.bias.data, 0.0)
 
-    print('initialize network with %s' % init_type)
+    logger.debug('initialize network with %s' % init_type)
     net.apply(init_func)
 
 
@@ -125,8 +136,8 @@ def print_network(net_):
     num_params = 0
     for param in net_.parameters():
         num_params += param.numel()
-    print(net_)
-    print('Total number of parameters: %d' % num_params)
+    logger.debug(net_)
+    logger.debug('Total number of parameters: %d' % num_params)
 
 
 ##############################################################################
@@ -609,9 +620,9 @@ class JointLoss(nn.Module):
         sm_term += self.w_sm2 * 0.0625 * self.LaplacianSmoothnessLoss(
             log_pred_d_4, input_4)
 
-        print('data_term %f' % data_term.item())
-        print('grad_term %f' % grad_term.item())
-        print('sm_term %f' % sm_term.item())
+        logger.debug('data_term %f' % data_term.item())
+        logger.debug('grad_term %f' % grad_term.item())
+        logger.debug('sm_term %f' % sm_term.item())
 
         total_loss = data_term + grad_term + sm_term + confidence_term
 

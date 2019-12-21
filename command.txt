@@ -1,0 +1,186 @@
+
+11/5時点で、colabのpython は3.6.8
+
+(tensorflow-gpu) C:\MMD\mannequinchallenge-vmd>conda create -n mannequinchallenge-test pip python=3.6
+
+https://pytorch.org/get-started/locally/
+
+conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
+
+conda install scikit-image h5py
+
+# データDL
+
+fetch_checkpoints.sh
+
+fetch_davis_data.sh
+
+conda install opencv
+
+conda install pillow
+
+
+
+
+batchSize=1, interval=60, num_workers=4
+
+WARNING:__main__:深度推定 idx: 60(60) 処理: 26.00502896308899[sec]
+
+batchSize=4, interval=60, num_workers=4
+
+WARNING:__main__:深度推定 idx: 60(60) 処理: 23.2601637840271[sec]
+
+batchSize=6, interval=10, num_workers=4
+
+RuntimeError: CUDA out of memory
+
+batchSize=6, interval=10, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+batchSize=1, interval=10, num_workers=1
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 9.312756776809692[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 4.037822484970093[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 4.029843091964722[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 3.9206643104553223[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 4.029378175735474[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 4.103612184524536[sec]
+
+batchSize=2, interval=10, num_workers=1
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 12.9820396900177[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 3.2819905281066895[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 3.1426753997802734[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 3.202650547027588[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 3.1572771072387695[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 3.226557731628418[sec]
+
+batchSize=4, interval=10, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+batchSize=2, interval=10, num_workers=2
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 29.191670417785645[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 5.206026315689087[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 5.207375764846802[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 5.245683431625366[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 5.2058494091033936[sec]
+
+batchSize=2, interval=10, num_workers=4
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 29.066704750061035[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 7.9379541873931885[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 8.162575483322144[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 8.112396240234375[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 8.249616861343384[sec]
+
+batchSize=4, interval=5, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+batchSize=2, interval=60, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+batchSize=2, interval=30, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+# ---------------------------
+# conda
+
+```
+
+batchSize=4, interval=10, num_workers=1
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 13.364176750183105[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 6.919853210449219[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 2.3936383724212646[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 2.4085540771484375[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 2.414539337158203[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 2.4005980491638184[sec]
+
+batchSize=4, interval=10, num_workers=4
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 16.429585456848145[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 9.929916381835938[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 5.784661293029785[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 5.928679704666138[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 5.889274835586548[sec]
+
+batchSize=8, interval=10, num_workers=1
+
+RuntimeError: CUDA out of memory
+
+batchSize=4, interval=10, num_workers=1
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 13.411075115203857[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 6.625812292098999[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 2.438680648803711[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 2.364671230316162[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 2.4485206604003906[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 2.39605975151062[sec]
+WARNING:__main__:深度推定 idx: 70(70) 処理: 2.3636462688446045[sec]
+WARNING:__main__:深度推定 idx: 80(80) 処理: 2.3856427669525146[sec]
+WARNING:__main__:深度推定 idx: 90(90) 処理: 2.3666975498199463[sec]
+WARNING:__main__:深度推定 idx: 100(100) 処理: 2.384648323059082[sec]
+
+35
+
+batchSize=1, interval=10, num_workers=1
+
+WARNING:__main__:深度推定 idx: 10(10) 処理: 8.748087882995605[sec]
+WARNING:__main__:深度推定 idx: 20(20) 処理: 3.1563942432403564[sec]
+WARNING:__main__:深度推定 idx: 30(30) 処理: 3.1047189235687256[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 3.089730739593506[sec]
+WARNING:__main__:深度推定 idx: 50(50) 処理: 3.068758726119995[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 3.1625349521636963[sec]
+WARNING:__main__:深度推定 idx: 70(70) 処理: 3.1666762828826904[sec]
+WARNING:__main__:深度推定 idx: 80(80) 処理: 3.1376304626464844[sec]
+WARNING:__main__:深度推定 idx: 90(90) 処理: 3.090756416320801[sec]
+WARNING:__main__:深度推定 idx: 100(100) 処理: 3.1375794410705566[sec]
+WARNING:__main__:深度推定 idx: 110(110) 処理: 3.082754373550415[sec]
+
+36
+
+batchSize=4, interval=20, num_workers=1
+
+WARNING:__main__:深度推定 idx: 20(20) 処理: 13.59508204460144[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 3.601665735244751[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 3.4343299865722656[sec]
+WARNING:__main__:深度推定 idx: 80(80) 処理: 3.4182257652282715[sec]
+WARNING:__main__:深度推定 idx: 100(100) 処理: 3.4159224033355713[sec]
+WARNING:__main__:深度推定 idx: 120(120) 処理: 3.456063985824585[sec]
+WARNING:__main__:深度推定 idx: 140(140) 処理: 3.4165496826171875[sec]
+f
+
+100: 25
+120: 28
+
+batchSize=4, interval=30, num_workers=1
+
+WARNING:__main__:深度推定 idx: 30(30) 処理: 14.915940999984741[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 9.364684104919434[sec]
+WARNING:__main__:深度推定 idx: 90(90) 処理: 4.428308486938477[sec]
+WARNING:__main__:深度推定 idx: 120(120) 処理: 4.465049743652344[sec]
+WARNING:__main__:深度推定 idx: 142(142) 処理: 3.6213080883026123[sec]
+I
+
+120: 31
+
+batchSize=4, interval=20, num_workers=1,gpu制限なし
+
+WARNING:__main__:深度推定 idx: 20(20) 処理: 13.240251064300537[sec]
+WARNING:__main__:深度推定 idx: 40(40) 処理: 3.3576900959014893[sec]
+WARNING:__main__:深度推定 idx: 60(60) 処理: 3.345061779022217[sec]
+WARNING:__main__:深度推定 idx: 80(80) 処理: 3.3709778785705566[sec]
+WARNING:__main__:深度推定 idx: 100(100) 処理: 3.364034652709961[sec]
+WARNING:__main__:深度推定 idx: 120(120) 処理: 3.326070785522461[sec]
+
+```
+
+
+
+
