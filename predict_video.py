@@ -620,7 +620,7 @@ def read_openpose_start_json(json_path):
     is_started = False
     
     for frame_idx in range(json_size):
-        file_name = str(frame_idx)
+        file_name = "{0}.json".format(frame_idx)
         logger.debug("reading {0}".format(file_name))
         _file = os.path.join(json_path, file_name)
 
