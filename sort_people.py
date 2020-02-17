@@ -57,7 +57,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
             break
         
         # 開始シーンのJSONデータを読み込む
-        file_name = re.sub(r'\d+', "%d".format(cnt), start_json_name)
+        file_name = "{0}.json".format(cnt)
         _file = os.path.join(json_path, file_name)
         try:
             data = json.load(open(_file))
