@@ -613,21 +613,16 @@ def read_openpose_start_json(json_path):
     json_files = sorted([filename for filename in json_files if filename.endswith(".json")])
 
     # jsonのファイル数が読み取り対象フレーム数
-    json_size = len(json_files)
+    json_size = int(json_files[-1])
     # 開始フレーム
     start_frame = 0
     # 開始フラグ
     is_started = False
     
-    for file_name in json_files:
+    for frame_idx in range(json_size):
+        file_name = str(frame_idx)
         logger.debug("reading {0}".format(file_name))
         _file = os.path.join(json_path, file_name)
-
-        if not os.path.isfile(_file):
-            if is_started:
-                raise Exception("No file found!!, {0}".format(_file))
-            else:
-                continue
 
         try:
             data = json.load(open(_file))
@@ -635,8 +630,8 @@ def read_openpose_start_json(json_path):
             logger.warning("JSON読み込み失敗のため、空データ読み込み, %s %s", _file, e)
             data = json.load(open("tensorflow/json/all_empty_keypoints.json"))
 
-        # 12桁の数字文字列から、フレームINDEX取得
-        frame_idx = int(re.findall("(\d{12})", file_name)[0])
+        # # 12桁の数字文字列から、フレームINDEX取得
+        # frame_idx = int(re.findall("(\d{12})", file_name)[0])
         
         if (frame_idx <= 0 or is_started == False) and len(data["people"]) > 0:
             # 何らかの人物情報が入っている場合に開始

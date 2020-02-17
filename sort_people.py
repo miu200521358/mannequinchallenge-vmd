@@ -57,7 +57,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
             break
         
         # 開始シーンのJSONデータを読み込む
-        file_name = re.sub(r'\d{12}', "{0:012d}".format(cnt), start_json_name)
+        file_name = re.sub(r'\d+', "%d".format(cnt), start_json_name)
         _file = os.path.join(json_path, file_name)
         try:
             data = json.load(open(_file))
@@ -146,8 +146,11 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
         if _idx in order_specific_dict:
             order_sorted_idxs = order_specific_dict[_idx]
 
-        # 再頻出INDEXを算出
-        return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range)
+        # 指定されていない場合、先頭から順に配置
+        return [i for i in range(number_people_max)]
+
+        # # 再頻出INDEXを算出
+        # return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range)
 
 # ソート順と向きを求める
 def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range):
