@@ -521,6 +521,7 @@ def outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, en
                 op_avi_path = re.sub(r'json$', "openpose.avi", json_path)
             else:
                 op_avi_path = re.sub(r'json/?', "openpose.avi", json_path)
+                op_avi_path = "/gdrive/My Drive/autotrace/output_buster_30fps_edit2(1000-2000)_20200217_132249/AlphaPose_buster_30fps_edit2(1000-2000).mp4"
             logger.info("op_avi_path: %s", op_avi_path)
             # Openopse結果AVIを読み込む
             cnt = 0
