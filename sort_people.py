@@ -146,11 +146,8 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
         if _idx in order_specific_dict:
             order_sorted_idxs = order_specific_dict[_idx]
 
-        # 指定されていない場合、先頭から順に配置
-        return [i for i in range(number_people_max)]
-
-        # # 再頻出INDEXを算出
-        # return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range)
+        # 再頻出INDEXを算出
+        return calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range)
 
 # ソート順と向きを求める
 def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max, past_pattern_datas, pattern_datas, order_sorted_idxs, past_sorted_idxs, frame_img, dimensional_range):
@@ -184,11 +181,12 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
                 all_past_pattern_datas[_eidx*4+op_idx] = ppd
 
         # 現在データを基準にソート順を求める
-        sorted_idxs = calc_sort_frame(_idx, number_people_max, all_pattern_datas, all_past_pattern_datas, dimensional_range, \
-            [{"th": 0.4, "past_th": 0.0, "most_th": 0.7, "all_most_th": 0.5, "ppd_th": 0.5}, \
-            {"th": 0.01, "past_th": 0.0, "most_th": 0.6, "all_most_th": 0.4, "ppd_th": 0.3}, \
-            {"th": 0.01, "past_th": 0.0, "most_th": 0.55, "all_most_th": 0.3, "ppd_th": 0.0}, \
-            {"th": 0.01, "past_th": 0.0, "most_th": 0.51, "all_most_th": 0.3, "ppd_th": 0.0}])
+        sorted_idxs = [i for i in range(number_people_max)]
+        # sorted_idxs = calc_sort_frame(_idx, number_people_max, all_pattern_datas, all_past_pattern_datas, dimensional_range, \
+        #     [{"th": 0.4, "past_th": 0.0, "most_th": 0.7, "all_most_th": 0.5, "ppd_th": 0.5}, \
+        #     {"th": 0.01, "past_th": 0.0, "most_th": 0.6, "all_most_th": 0.4, "ppd_th": 0.3}, \
+        #     {"th": 0.01, "past_th": 0.0, "most_th": 0.55, "all_most_th": 0.3, "ppd_th": 0.0}, \
+        #     {"th": 0.01, "past_th": 0.0, "most_th": 0.51, "all_most_th": 0.3, "ppd_th": 0.0}])
         
         logger.debug("_idx: %s, sorted_idxs: %s", _idx, sorted_idxs)
 
