@@ -613,7 +613,7 @@ def read_openpose_start_json(json_path):
     json_files = sorted([filename for filename in json_files if filename.endswith(".json")])
 
     # jsonのファイル数が読み取り対象フレーム数
-    json_size = int(json_files[-1])
+    json_size = int(json_files[-1][0:-5])
     # 開始フレーム
     start_frame = 0
     # 開始フラグ
