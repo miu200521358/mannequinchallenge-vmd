@@ -195,7 +195,8 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
         
         # 類推された人物INDEXを基準にソート順を求める
         sorted_idxs_in_pidx = []
-        for e, pdata in enumerate(pattern_datas):
+        for e in range(number_people_max):
+            pdata = pattern_datas[e * 4]
             logger.info("pd: %s", pdata)
             logger.info("pd-people-e: %s", pdata)
             logger.info("pd-people-e-idx: %s", pdata["idx"])
