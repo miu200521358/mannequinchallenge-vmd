@@ -200,7 +200,8 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
             logger.info("pd-people-e: %s", pdata)
             logger.info("pd-people-e-idx: %s", pdata["idx"])
             sorted_idxs_in_pidx.append((e, int(pdata["idx"])))
-        sorted_idxs = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
+        sorted_idxs_datas = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
+        sorted_idxs = [x[0] for x in sorted_idxs_datas]
 
         # 現在データを基準にソート順を求める
         # sorted_idxs = [i for i in range(number_people_max)]
@@ -210,7 +211,7 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
         #     {"th": 0.01, "past_th": 0.0, "most_th": 0.55, "all_most_th": 0.3, "ppd_th": 0.0}, \
         #     {"th": 0.01, "past_th": 0.0, "most_th": 0.51, "all_most_th": 0.3, "ppd_th": 0.0}])
         
-        logger.debug("_idx: %s, sorted_idxs: %s", _idx, sorted_idxs)
+        logger.info("_idx: %s, sorted_idxs: %s", _idx, sorted_idxs)
 
         if order_sorted_idxs:
             copy_sorted_idxs = copy.deepcopy(sorted_idxs)

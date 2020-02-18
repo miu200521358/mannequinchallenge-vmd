@@ -81,8 +81,8 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
 
     for pidx in range(number_people_max):
         # 人数分サイズデータ出力
-        size_idx_path = '{0}/{1}_{3}_idx{2:02d}/size.txt'.format(os.path.dirname(
-            json_path), os.path.basename(json_path), pidx+1, now_str)
+        size_idx_path = '{0}/{1}_idx{2:02d}/size.txt'.format(os.path.dirname(
+            json_path), now_str, pidx+1)
         os.makedirs(os.path.dirname(size_idx_path), exist_ok=True)
         sizef = open(size_idx_path, 'w')
         # 一行分を追記
