@@ -468,7 +468,7 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
 
     if is_avi_output:
         # MMD用背景AVI出力
-        outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height)
+        outputAVI(video_path, depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height)
 
     if level[verbose] <= logging.INFO and len(png_lib) > 0:
         # 終わったらGIF出力
@@ -500,7 +500,7 @@ def recalc_depth(pred_depth_ary, pred_depth_support_ary):
     # 基準深度で入れ直し
     return np.where(pred_depth_ary != 0, (pred_depth_ary - base_depth) * 100, pred_depth_ary), np.where(pred_depth_support_ary != 0, (pred_depth_support_ary - base_depth) * 100, pred_depth_support_ary)
 
-def outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height):
+def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, start_frame, end_frame_no, start_json_name, org_width, org_height):
     fourcc_names = ["I420"]
 
     if os.name == "nt":
@@ -521,7 +521,10 @@ def outputAVI(depth_path, json_path, number_people_max, now_str, start_frame, en
                 op_avi_path = re.sub(r'json$', "openpose.avi", json_path)
             else:
                 op_avi_path = re.sub(r'json/?', "openpose.avi", json_path)
-                op_avi_path = "/gdrive/My Drive/autotrace/output_buster_30fps_edit2(1000-2000)_20200217_132249/AlphaPose_buster_30fps_edit2(1000-2000).mp4"
+            
+            # 動画ファイルパスをAlphaPose用に
+            op_avi_path = re.sub(r'/sep-json', "AlphaPose_{0}".format(video_path), json_path)
+            
             logger.info("op_avi_path: %s", op_avi_path)
             # Openopse結果AVIを読み込む
             cnt = 0
@@ -614,16 +617,21 @@ def read_openpose_start_json(json_path):
     json_files = sorted([filename for filename in json_files if filename.endswith(".json")])
 
     # jsonのファイル数が読み取り対象フレーム数
-    json_size = int(json_files[-1][0:-5])
+    json_size = len(json_files)
     # 開始フレーム
     start_frame = 0
     # 開始フラグ
     is_started = False
     
-    for frame_idx in range(json_size):
-        file_name = "{0}.json".format(frame_idx)
+    for file_name in json_files:
         logger.debug("reading {0}".format(file_name))
         _file = os.path.join(json_path, file_name)
+
+        if not os.path.isfile(_file):
+            if is_started:
+                raise Exception("No file found!!, {0}".format(_file))
+            else:
+                continue
 
         try:
             data = json.load(open(_file))
@@ -631,8 +639,8 @@ def read_openpose_start_json(json_path):
             logger.warning("JSON読み込み失敗のため、空データ読み込み, %s %s", _file, e)
             data = json.load(open("tensorflow/json/all_empty_keypoints.json"))
 
-        # # 12桁の数字文字列から、フレームINDEX取得
-        # frame_idx = int(re.findall("(\d{12})", file_name)[0])
+        # 12桁の数字文字列から、フレームINDEX取得
+        frame_idx = int(re.findall("(\d{12})", file_name)[0])
         
         if (frame_idx <= 0 or is_started == False) and len(data["people"]) > 0:
             # 何らかの人物情報が入っている場合に開始
@@ -647,7 +655,6 @@ def read_openpose_start_json(json_path):
     logger.warning("開始フレーム番号: %s", start_frame)
 
     return json_files[0], start_frame, json_size
-
 
 
 # 映像解析縮尺情報
@@ -688,8 +695,10 @@ def main():
     else:
         now_str = opt.now
 
+    sep_json_path = '{0}/{1}/sep-json'.format(os.path.dirname(opt.json_path))
+
     # 日付+depthディレクトリ作成
-    depth_path = '{0}/{1}_{2}_depth'.format(os.path.dirname(opt.json_path), os.path.basename(opt.json_path), now_str)
+    depth_path = '{0}/{1}/{2}_depth'.format(os.path.dirname(opt.json_path), os.path.basename(opt.json_path), now_str)
     os.makedirs(depth_path, exist_ok=True)
 
     # 過去深度ディレクトリ
@@ -770,7 +779,7 @@ def main():
         paramf.close()
 
     # Predict the image
-    predict_video(now_str, opt.video_path, depth_path, past_depth_path, interval, opt.json_path, opt.number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, opt.end_frame_no, opt.order_start_frame, opt.verbose, opt)
+    predict_video(now_str, opt.video_path, depth_path, past_depth_path, interval, sep_json_path, opt.number_people_max, reverse_specific_dict, order_specific_dict, is_avi_output, opt.end_frame_no, opt.order_start_frame, opt.verbose, opt)
 
     logger.debug("Done!!")
     logger.debug("深度推定結果: {0}".format(depth_path +'/depth.txt'))

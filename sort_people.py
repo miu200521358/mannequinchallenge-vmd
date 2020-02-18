@@ -57,7 +57,7 @@ def exec(pred_depth_ary, pred_depth_support_ary, pred_conf_ary, pred_conf_suppor
             break
         
         # 開始シーンのJSONデータを読み込む
-        file_name = "{0}.json".format(cnt)
+        file_name = re.sub(r'\d{12}', "{0:012d}".format(cnt), start_json_name)
         _file = os.path.join(json_path, file_name)
         try:
             data = json.load(open(_file))
@@ -104,16 +104,22 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
         # 今回情報
         now_pattern_datas = [{} for x in range(number_people_max)]
 
-        # 最初はインデックスの通りに並べる
-        for _pidx in range(number_people_max):
-            sorted_idxs[_pidx] = _pidx
+        # 類推された人物INDEXを基準にソート順を求める
+        sorted_idxs_in_pidx = [(e, int(pd["idx"])) for e, pd in enumerate(data)]
+        sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
+
+        for e, idx_data in enumerate(sorted_idxs_in_pidx):            
+            sorted_idxs[e] = idx_data[0]
 
         # パターンはノーマルで生成        
-        for _pidx in range(number_people_max):
+        for _pidx in sorted_idxs:
             # パターン別のデータ
             now_pattern_datas[_pidx] = {"eidx": _pidx, "pidx": _pidx, "sidx": _pidx, "in_idx": _pidx, "pattern": OPENPOSE_NORMAL["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
+
+            # 人物INDEX
+            now_pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
@@ -179,9 +185,17 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
 
                 # 前回データ
                 all_past_pattern_datas[_eidx*4+op_idx] = ppd
+        
+        # 類推された人物INDEXを基準にソート順を求める
+        sorted_idxs_in_pidx = [(e, int(pd["idx"])) for e, pd in enumerate(pattern_datas)]
+        sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
+
+        for e, idx_data in enumerate(sorted_idxs_in_pidx):            
+            sorted_idxs[e] = idx_data[0]
+
 
         # 現在データを基準にソート順を求める
-        sorted_idxs = [i for i in range(number_people_max)]
+        # sorted_idxs = [i for i in range(number_people_max)]
         # sorted_idxs = calc_sort_frame(_idx, number_people_max, all_pattern_datas, all_past_pattern_datas, dimensional_range, \
         #     [{"th": 0.4, "past_th": 0.0, "most_th": 0.7, "all_most_th": 0.5, "ppd_th": 0.5}, \
         #     {"th": 0.01, "past_th": 0.0, "most_th": 0.6, "all_most_th": 0.4, "ppd_th": 0.3}, \
@@ -674,6 +688,9 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             pattern_datas[in_idx] = {"eidx": _eidx, "pidx": _pidx, "sidx": _pidx, "in_idx": in_idx, "pattern": op_idx_data["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
+
+            # 人物INDEX
+            pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_eidx]["pose_keypoints_2d"]
