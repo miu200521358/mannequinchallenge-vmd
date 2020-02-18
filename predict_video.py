@@ -410,31 +410,31 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                             per_depth_support = []
                             per_weight_support = []
                             
-                            # 深度範囲
-                            pred_x_rng = abs(start_pred_x - end_pred_x)
-                            pred_y_rng = abs(start_pred_y - end_pred_y)
+                            # # 深度範囲
+                            # pred_x_rng = abs(start_pred_x - end_pred_x)
+                            # pred_y_rng = abs(start_pred_y - end_pred_y)
 
-                            # 短い方の距離を単位とする
-                            pred_per = min(pred_x_rng, pred_y_rng)
+                            # # 短い方の距離を単位とする
+                            # pred_per = min(pred_x_rng, pred_y_rng)
 
-                            # 軸
-                            pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
-                            pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
+                            # # 軸
+                            # pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
+                            # pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
 
-                            # 重み
-                            pred_weigths = np.linspace( start_w, end_w, pred_per + 1 )
+                            # # 重み
+                            # pred_weigths = np.linspace( start_w, end_w, pred_per + 1 )
 
-                            for (x, y, w) in zip(pred_x_line, pred_y_line, pred_weigths):
-                                # 直線状の深度と重みを計算
-                                per_depth_support.append(pred[y][x])
-                                per_weight_support.append(w)
+                            # for (x, y, w) in zip(pred_x_line, pred_y_line, pred_weigths):
+                            #     # 直線状の深度と重みを計算
+                            #     per_depth_support.append(pred[y][x])
+                            #     per_weight_support.append(w)
 
-                            # 重み付き平均を計算
-                            depth_support[_didx] = np.average(per_depth_support, weights=per_weight_support)
-                            conf_support[_didx] = np.mean([start_conf, end_conf])
+                            # # 重み付き平均を計算
+                            # depth_support[_didx] = np.average(per_depth_support, weights=per_weight_support)
+                            # conf_support[_didx] = np.mean([start_conf, end_conf])
 
-                        pred_depth_support_ary[in_idx][dpidx] = depth_support
-                        pred_conf_support_ary[in_idx][dpidx] = conf_support
+                        pred_depth_support_ary[in_idx][dpidx] = []
+                        pred_conf_support_ary[in_idx][dpidx] = []
 
                         # ------------------
 
