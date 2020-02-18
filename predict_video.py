@@ -577,7 +577,7 @@ def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, sta
                                 # logger.debug("x: %s, y: %s", data["people"][0]["pose_keypoints_2d"][o], data["people"][0]["pose_keypoints_2d"][o+1])
                                 # cv2.drawMarker( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+5), int(data["people"][0]["pose_keypoints_2d"][o+1]+5)), color, markerType=cv2.MARKER_TILTED_CROSS, markerSize=10)
                                 # 座標のXY位置に点を置く。原点が左上なので、ちょっとずらす
-                                cv2.circle( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+1), int(data["people"][0]["pose_keypoints_2d"][o+1]+1)), 5, color, thickness=-1)
+                                cv2.circle( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+1), int(data["people"][0]["pose_keypoints_2d"][o+1]+1)), 10, color, thickness=-1)
                 
                 # 縮小
                 output_frame = cv2.resize(frame, (avi_width, avi_height))
