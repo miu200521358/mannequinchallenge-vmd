@@ -105,7 +105,13 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
         now_pattern_datas = [{} for x in range(number_people_max)]
 
         # 類推された人物INDEXを基準にソート順を求める
-        sorted_idxs_in_pidx = [(e, int(pd["people"][e]["idx"])) for e, pd in enumerate(data)]
+        sorted_idxs_in_pidx = []
+        for e, pd in enumerate(data):
+            logger.info("pd: %s", pd)
+            logger.info("pd-people: %s", pd["people"])
+            logger.info("pd-people-e: %s", pd["people"][e])
+            logger.info("pd-people-e-idx: %s", pd["people"][e]["idx"])
+            sorted_idxs_in_pidx.append((e, int(pd["people"][e]["idx"])))
         sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
         for e, idx_data in enumerate(sorted_idxs_in_pidx):            
