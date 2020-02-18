@@ -563,7 +563,7 @@ def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, sta
                     # 【08番目】 左:濃黄, 右: 赤
                     # 【09番目】 左:濃桃, 右: 赤
                     idx_json_path = '{0}/{1}_idx{2:02d}/json/{3}'.format(os.path.dirname(json_path), now_str, pidx+1, re.sub(r'\d{12}', "{0:012d}".format(cnt + start_frame), start_json_name))
-                    logger.warning("pidx: %s, %s, idx_json_path: %s", pidx, idx_json_path)
+                    logger.warning("pidx: %s, idx_json_path: %s", pidx, idx_json_path)
 
                     if os.path.isfile(idx_json_path):
                         data = json.load(open(idx_json_path))
