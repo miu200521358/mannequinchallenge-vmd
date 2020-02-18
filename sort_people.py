@@ -110,7 +110,7 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             logger.info("pd: %s", pdata)
             logger.info("pd-people-e: %s", pdata)
             logger.info("pd-people-e-idx: %s", pdata["idx"])
-            sorted_idxs_in_pidx.append((e, int(pdata["idx"])))
+            sorted_idxs_in_pidx.append((e, int(pdata["idx"][0])))
         sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
         for e, idx_data in enumerate(sorted_idxs_in_pidx):            
@@ -124,7 +124,7 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
             # 人物INDEX
-            now_pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"])
+            now_pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"][0])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
@@ -192,7 +192,7 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
                 all_past_pattern_datas[_eidx*4+op_idx] = ppd
         
         # 類推された人物INDEXを基準にソート順を求める
-        sorted_idxs_in_pidx = [(e, int(pd["idx"])) for e, pd in enumerate(pattern_datas)]
+        sorted_idxs_in_pidx = [(e, pd["idx"]) for e, pd in enumerate(pattern_datas)]
         sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
         for e, idx_data in enumerate(sorted_idxs_in_pidx):            
@@ -695,7 +695,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
             # 人物INDEX
-            pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"])
+            pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"][0])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_eidx]["pose_keypoints_2d"]
