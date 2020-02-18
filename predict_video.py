@@ -523,7 +523,7 @@ def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, sta
                 op_avi_path = re.sub(r'json/?', "openpose.avi", json_path)
             
             # 動画ファイルパスをAlphaPose用に
-            op_avi_path = re.sub(r'/sep-json', "AlphaPose_{0}".format(video_path), json_path)
+            op_avi_path = re.sub(r'sep-json/?', "AlphaPose_{0}".format(video_path), json_path)
             
             logger.info("op_avi_path: %s", op_avi_path)
             # Openopse結果AVIを読み込む
