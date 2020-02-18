@@ -113,18 +113,18 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             sorted_idxs_in_pidx.append((e, int(pdata["idx"][0])))
         sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
-        for e, idx_data in enumerate(sorted_idxs_in_pidx):            
-            sorted_idxs[e] = idx_data[0]
+        for _e, idx_data in enumerate(sorted_idxs_in_pidx):            
+            sorted_idxs[_e] = idx_data[0]
 
         # パターンはノーマルで生成        
-        for _pidx in sorted_idxs:
+        for _e, _pidx in enumerate(sorted_idxs):
             # パターン別のデータ
-            now_pattern_datas[_pidx] = {"eidx": _pidx, "pidx": _pidx, "sidx": _pidx, "in_idx": _pidx, "pattern": OPENPOSE_NORMAL["pattern"], 
+            now_pattern_datas[_pidx] = {"eidx": _pidx, "pidx": _pidx, "sidx": _pidx, "in_idx": _pidx, "idx": 999, "pattern": OPENPOSE_NORMAL["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
             # 人物INDEX
-            now_pattern_datas[_pidx]["idx"] = int(data["people"][_pidx]["idx"][0])
+            now_pattern_datas[_e]["idx"] = int(data["people"][_pidx]["idx"][0])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
@@ -690,7 +690,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             in_idx = (_eidx * 4) + op_idx
 
             # パターン別のデータ
-            pattern_datas[in_idx] = {"eidx": _eidx, "pidx": _pidx, "sidx": _pidx, "in_idx": in_idx, "pattern": op_idx_data["pattern"], 
+            pattern_datas[in_idx] = {"eidx": _eidx, "pidx": _pidx, "sidx": _pidx, "in_idx": in_idx, "idx": 999, "pattern": op_idx_data["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
