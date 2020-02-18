@@ -382,59 +382,59 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
                         conf_support = np.zeros(17)
                         weights = [0.1,0.8,0.4,0.1,0.05,0.4,0.1,0.05,0.8,0.5,0.2,0.8,0.5,0.2,0.05,0.05,0.05,0.05]
 
-                        # Openposeで繋がっているライン上の深度を取得する
-                        for _didx, (start_idx, end_idx, start_w, end_w) in enumerate([(0,1,weights[0],weights[1]),(1,2,weights[1],weights[2]),(2,3,weights[2],weights[3]),(3,4,weights[3],weights[4]), \
-                                (1,5,weights[1],weights[5]),(5,6,weights[5],weights[6]),(6,7,weights[6],weights[7]),(1,8,weights[1],weights[8]),(8,9,weights[8],weights[9]), \
-                                (9,10,weights[9],weights[10]),(1,11,weights[1],weights[11]),(11,12,weights[11],weights[12]),(12,13,weights[12],weights[13]),(0,14,weights[0],weights[14]), \
-                                (14,16,weights[14],weights[16]),(0,15,weights[0],weights[15]),(15,17,weights[15],weights[17])]):
-                            # オリジナルの画像サイズから、縮尺を取得
-                            start_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3] / org_width
-                            start_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+1] / org_height
-                            start_conf = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+2]
-                            # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
+                        # # Openposeで繋がっているライン上の深度を取得する
+                        # for _didx, (start_idx, end_idx, start_w, end_w) in enumerate([(0,1,weights[0],weights[1]),(1,2,weights[1],weights[2]),(2,3,weights[2],weights[3]),(3,4,weights[3],weights[4]), \
+                        #         (1,5,weights[1],weights[5]),(5,6,weights[5],weights[6]),(6,7,weights[6],weights[7]),(1,8,weights[1],weights[8]),(8,9,weights[8],weights[9]), \
+                        #         (9,10,weights[9],weights[10]),(1,11,weights[1],weights[11]),(11,12,weights[11],weights[12]),(12,13,weights[12],weights[13]),(0,14,weights[0],weights[14]), \
+                        #         (14,16,weights[14],weights[16]),(0,15,weights[0],weights[15]),(15,17,weights[15],weights[17])]):
+                        #     # オリジナルの画像サイズから、縮尺を取得
+                        #     start_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3] / org_width
+                        #     start_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+1] / org_height
+                        #     start_conf = data["people"][dpidx]["pose_keypoints_2d"][start_idx*3+2]
+                        #     # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
 
-                            # 縮尺を展開して、深度解析後の画像サイズに合わせる
-                            start_pred_x = int(pred_width * start_scale_org_x)
-                            start_pred_y = int(pred_height * start_scale_org_y)
+                        #     # 縮尺を展開して、深度解析後の画像サイズに合わせる
+                        #     start_pred_x = int(pred_width * start_scale_org_x)
+                        #     start_pred_y = int(pred_height * start_scale_org_y)
 
-                            # オリジナルの画像サイズから、縮尺を取得
-                            end_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3] / org_width
-                            end_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+1] / org_height
-                            end_conf = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+2]
-                            # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
+                        #     # オリジナルの画像サイズから、縮尺を取得
+                        #     end_scale_org_x = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3] / org_width
+                        #     end_scale_org_y = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+1] / org_height
+                        #     end_conf = data["people"][dpidx]["pose_keypoints_2d"][end_idx*3+2]
+                        #     # logger.debug("scale_org_x: %s, scale_org_y: %s", scale_org_x, scale_org_y)
 
-                            # 縮尺を展開して、深度解析後の画像サイズに合わせる
-                            end_pred_x = int(pred_width * end_scale_org_x)
-                            end_pred_y = int(pred_height * end_scale_org_y)
+                        #     # 縮尺を展開して、深度解析後の画像サイズに合わせる
+                        #     end_pred_x = int(pred_width * end_scale_org_x)
+                        #     end_pred_y = int(pred_height * end_scale_org_y)
 
-                            per_depth_support = []
-                            per_weight_support = []
+                        #     per_depth_support = []
+                        #     per_weight_support = []
                             
-                            # # 深度範囲
-                            # pred_x_rng = abs(start_pred_x - end_pred_x)
-                            # pred_y_rng = abs(start_pred_y - end_pred_y)
+                        #     # # 深度範囲
+                        #     # pred_x_rng = abs(start_pred_x - end_pred_x)
+                        #     # pred_y_rng = abs(start_pred_y - end_pred_y)
 
-                            # # 短い方の距離を単位とする
-                            # pred_per = min(pred_x_rng, pred_y_rng)
+                        #     # # 短い方の距離を単位とする
+                        #     # pred_per = min(pred_x_rng, pred_y_rng)
 
-                            # # 軸
-                            # pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
-                            # pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
+                        #     # # 軸
+                        #     # pred_x_line = np.linspace( min(start_pred_x, end_pred_x), max(start_pred_x, end_pred_x), pred_per + 1, dtype=int )
+                        #     # pred_y_line = np.linspace( min(start_pred_y, end_pred_y), max(start_pred_y, end_pred_y), pred_per + 1, dtype=int )
 
-                            # # 重み
-                            # pred_weigths = np.linspace( start_w, end_w, pred_per + 1 )
+                        #     # # 重み
+                        #     # pred_weigths = np.linspace( start_w, end_w, pred_per + 1 )
 
-                            # for (x, y, w) in zip(pred_x_line, pred_y_line, pred_weigths):
-                            #     # 直線状の深度と重みを計算
-                            #     per_depth_support.append(pred[y][x])
-                            #     per_weight_support.append(w)
+                        #     # for (x, y, w) in zip(pred_x_line, pred_y_line, pred_weigths):
+                        #     #     # 直線状の深度と重みを計算
+                        #     #     per_depth_support.append(pred[y][x])
+                        #     #     per_weight_support.append(w)
 
-                            # # 重み付き平均を計算
-                            # depth_support[_didx] = np.average(per_depth_support, weights=per_weight_support)
-                            # conf_support[_didx] = np.mean([start_conf, end_conf])
+                        #     # # 重み付き平均を計算
+                        #     # depth_support[_didx] = np.average(per_depth_support, weights=per_weight_support)
+                        #     # conf_support[_didx] = np.mean([start_conf, end_conf])
 
-                        pred_depth_support_ary[in_idx][dpidx] = []
-                        pred_conf_support_ary[in_idx][dpidx] = []
+                        pred_depth_support_ary[in_idx][dpidx] = depth_support
+                        pred_conf_support_ary[in_idx][dpidx] = conf_support
 
                         # ------------------
 
