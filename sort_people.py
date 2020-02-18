@@ -792,7 +792,7 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
     #     display_sorted_idx[now_sidx] = _eidx
 
     # ソート順
-    order_path = '{0}/{1}_{2}_depth/order.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), now_str)
+    order_path = '{0}/{1}_depth/order.txt'.format(os.path.dirname(json_path), now_str)
     # 追記モードで開く
     orderf = open(order_path, 'a')
     # 一行分を追記
@@ -808,7 +808,7 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
             display_nose_pos[_eidx] = [0, 0]
 
         # インデックス対応分のディレクトリ作成
-        idx_path = '{0}/{1}_{3}_idx{2:02d}/json/{4}'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str, file_name)
+        idx_path = '{0}/{1}_idx{2:02d}/json/{3}'.format(os.path.dirname(json_path), now_str, _eidx+1, file_name)
         os.makedirs(os.path.dirname(idx_path), exist_ok=True)
         
         output_data = {"people": [{"pose_keypoints_2d": []}]}
@@ -843,7 +843,7 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
         json.dump(output_data, open(idx_path,'w'), indent=4)
 
         # 深度データ
-        depth_idx_path = '{0}/{1}_{3}_idx{2:02d}/depth.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+        depth_idx_path = '{0}/{1}_idx{2:02d}/depth.txt'.format(os.path.dirname(json_path), now_str, _eidx+1, )
         # 追記モードで開く
         depthf = open(depth_idx_path, 'a')
         # 一行分を追記
@@ -851,7 +851,7 @@ def output_sorted_data(_idx, _display_idx, number_people_max, sorted_idxs, now_p
         depthf.close()
 
         # 信頼度データ
-        conf_idx_path = '{0}/{1}_{3}_idx{2:02d}/conf.txt'.format(os.path.dirname(json_path), os.path.basename(json_path), _eidx+1, now_str)
+        conf_idx_path = '{0}/{1}_idx{2:02d}/conf.txt'.format(os.path.dirname(json_path), now_str, _eidx+1)
         # 追記モードで開く
         conff = open(conf_idx_path, 'a')
         # 一行分を追記
