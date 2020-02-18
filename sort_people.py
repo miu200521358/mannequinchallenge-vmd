@@ -106,12 +106,11 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
 
         # 類推された人物INDEXを基準にソート順を求める
         sorted_idxs_in_pidx = []
-        for e, (pkey, pdata) in enumerate(data.items()):
+        for e, pdata in enumerate(data["people"]):
             logger.info("pd: %s", pdata)
-            logger.info("pd-people: %s", pdata["people"])
-            logger.info("pd-people-e: %s", pdata["people"][e])
-            logger.info("pd-people-e-idx: %s", pdata["people"][e]["idx"])
-            sorted_idxs_in_pidx.append((e, int(pdata["people"][e]["idx"])))
+            logger.info("pd-people-e: %s", pdata)
+            logger.info("pd-people-e-idx: %s", pdata["idx"])
+            sorted_idxs_in_pidx.append((e, int(pdata["idx"])))
         sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
         for e, idx_data in enumerate(sorted_idxs_in_pidx):            
