@@ -192,12 +192,13 @@ def calc_sort_and_direction_frame(_idx, reverse_specific_dict, number_people_max
                 all_past_pattern_datas[_eidx*4+op_idx] = ppd
         
         # 類推された人物INDEXを基準にソート順を求める
-        sorted_idxs_in_pidx = [(e, pd["idx"]) for e, pd in enumerate(pattern_datas)]
-        sorted_idxs_in_pidx = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
-
-        for e, idx_data in enumerate(sorted_idxs_in_pidx):            
-            sorted_idxs[e] = idx_data[0]
-
+        sorted_idxs_in_pidx = []
+        for e, pdata in enumerate(pattern_datas):
+            logger.info("pd: %s", pdata)
+            logger.info("pd-people-e: %s", pdata)
+            logger.info("pd-people-e-idx: %s", pdata["idx"])
+            sorted_idxs_in_pidx.append((e, int(pdata["idx"][0])))
+        sorted_idxs = sorted(sorted_idxs_in_pidx, key=lambda x: x[1])
 
         # 現在データを基準にソート順を求める
         # sorted_idxs = [i for i in range(number_people_max)]
