@@ -123,9 +123,6 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
-            # 人物INDEX
-            now_pattern_datas[_e]["idx"] = int(data["people"][_pidx]["idx"][0])
-
             # 1人分の関節位置データ
             now_xyc = data["people"][_pidx]["pose_keypoints_2d"]
 
@@ -145,6 +142,11 @@ def calc_sort_and_direction(_idx, reverse_specific_dict, order_specific_dict, nu
             # 深度補佐データ
             now_pattern_datas[_pidx]["depth_support"] = pred_depth_support[_pidx]
             now_pattern_datas[_pidx]["conf_support"] = pred_conf_support[_pidx]
+
+        # パターンはノーマルで生成        
+        for _e, _pidx in enumerate(sorted_idxs):
+            # 人物INDEX
+            now_pattern_datas[_e]["idx"] = int(data["people"][_pidx]["idx"][0])
 
         # 前回データはそのまま
         return sorted_idxs, now_pattern_datas
@@ -696,7 +698,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
             # 人物INDEX
-            pattern_datas[in_idx]["idx"] = int(data["people"][_eidx]["idx"][0])
+            pattern_datas[in_idx]["idx"] = int(data["people"][_pidx]["idx"][0])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_eidx]["pose_keypoints_2d"]
@@ -739,7 +741,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             if (np.mean(lpd["conf"]) != 0 or np.median(lpd["conf"]) != 0) and lpd["in_idx"] % 4 == 0:
                 file_logger.info("※※{0:05d}F目 信頼度低情報除外: eidx: {1}, 平均値: {2}, 中央値: {3}".format( _idx, lpd["eidx"], np.mean(lpd["conf"]), np.median(lpd["conf"]) ))
             # パターン別の初期データで再設定
-            pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "pattern": lpd["pattern"], 
+            pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "idx": lpd["idx"], "pattern": lpd["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0}
 
@@ -750,7 +752,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                 if (np.mean(lpd["conf"]) != 0 or np.median(lpd["conf"]) != 0) and lpd["in_idx"] % 4 == 0:
                     file_logger.info("※※{0:05d}F目 重複データ除外: eidx: {1}, 平均値: {2}, 中央値: {3}".format( _idx, lpd["eidx"], np.mean(lpd["conf"]), np.median(lpd["conf"]) ))
                 # パターン別の初期データで再設定
-                pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "pattern": lpd["pattern"], 
+                pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "idx": lpd["idx"], "pattern": lpd["pattern"], 
                     "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                     "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0}
                 break
@@ -775,7 +777,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
             if (np.mean(lpd["conf"]) != 0 or np.median(lpd["conf"]) != 0) and lpd["in_idx"] % 4 == 0:
                 file_logger.info("※※{0:05d}F目 体幹サイズ外情報除外: eidx: {1}, 平均値: {2}, 中央値: {3}".format( _idx, lpd["eidx"], np.mean(lpd["conf"]), np.median(lpd["conf"]) ))
             # パターン別の初期データで再設定
-            pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "pattern": lpd["pattern"], 
+            pattern_datas[_lidx] = {"eidx": lpd["eidx"], "pidx": lpd["pidx"], "sidx": lpd["sidx"], "in_idx": lpd["in_idx"], "idx": lpd["idx"], "pattern": lpd["pattern"], 
                 "x": np.zeros(18), "y": np.zeros(18), "conf": np.zeros(18), "fill": [False for x in range(18)], "depth": np.zeros(18), 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [frame_img[0,0] for x in range(18)], "x_avg": 0}
 
