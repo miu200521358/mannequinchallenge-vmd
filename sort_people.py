@@ -700,7 +700,7 @@ def prepare_sort(_idx, number_people_max, data, pred_depth, pred_depth_support, 
                 "depth_support": np.zeros(17), "conf_support": np.zeros(17), "color": [None for x in range(18)], "x_avg": 0, "conf_avg": 0}
 
             # 人物INDEX
-            pattern_datas[in_idx]["idx"] = int(data["people"][_pidx]["idx"][0])
+            pattern_datas[in_idx]["idx"] = int(data["people"][_eidx]["idx"][0])
 
             # 1人分の関節位置データ
             now_xyc = data["people"][_eidx]["pose_keypoints_2d"]
