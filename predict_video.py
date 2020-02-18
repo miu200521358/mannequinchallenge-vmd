@@ -695,10 +695,13 @@ def main():
     else:
         now_str = opt.now
 
-    sep_json_path = '{0}/{1}/sep-json'.format(os.path.dirname(opt.json_path))
+    print("json_path: %s" % opt.json_path)
+    print("json_path.basename: %s" % os.path.dirname(opt.json_path))
+
+    sep_json_path = '{0}/sep-json'.format(os.path.dirname(opt.json_path))
 
     # 日付+depthディレクトリ作成
-    depth_path = '{0}/{1}/{2}_depth'.format(os.path.dirname(opt.json_path), os.path.basename(opt.json_path), now_str)
+    depth_path = '{0}/{1}_depth'.format(os.path.dirname(opt.json_path), now_str)
     os.makedirs(depth_path, exist_ok=True)
 
     # 過去深度ディレクトリ
