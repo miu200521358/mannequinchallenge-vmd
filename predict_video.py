@@ -562,8 +562,8 @@ def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, sta
                     # 【07番目】 左:灰色, 右: 赤
                     # 【08番目】 左:濃黄, 右: 赤
                     # 【09番目】 左:濃桃, 右: 赤
-                    idx_json_path = '{0}/{1}_{3}_idx{2:02d}/json/{4}'.format(os.path.dirname(json_path), os.path.basename(json_path), pidx+1, now_str, re.sub(r'\d{12}', "{0:012d}".format(cnt + start_frame), start_json_name))
-                    # logger.warning("pidx: %s, color: %s, idx_json_path: %s", pidx, color, idx_json_path)
+                    idx_json_path = '{0}/{1}_idx{2:02d}/json/{3}'.format(os.path.dirname(json_path), now_str, pidx+1, re.sub(r'\d{12}', "{0:012d}".format(cnt + start_frame), start_json_name))
+                    logger.warning("pidx: %s, color: %s, idx_json_path: %s", pidx, color, idx_json_path)
 
                     if os.path.isfile(idx_json_path):
                         data = json.load(open(idx_json_path))
@@ -577,7 +577,7 @@ def outputAVI(video_path, depth_path, json_path, number_people_max, now_str, sta
                                 # logger.debug("x: %s, y: %s", data["people"][0]["pose_keypoints_2d"][o], data["people"][0]["pose_keypoints_2d"][o+1])
                                 # cv2.drawMarker( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+5), int(data["people"][0]["pose_keypoints_2d"][o+1]+5)), color, markerType=cv2.MARKER_TILTED_CROSS, markerSize=10)
                                 # 座標のXY位置に点を置く。原点が左上なので、ちょっとずらす
-                                cv2.circle( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+1), int(data["people"][0]["pose_keypoints_2d"][o+1]+1)), 10, color, thickness=-1)
+                                cv2.circle( frame, (int(data["people"][0]["pose_keypoints_2d"][o]+1), int(data["people"][0]["pose_keypoints_2d"][o+1]+1)), 5, color, thickness=-1)
                 
                 # 縮小
                 output_frame = cv2.resize(frame, (avi_width, avi_height))
