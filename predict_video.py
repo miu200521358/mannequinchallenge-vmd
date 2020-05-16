@@ -267,8 +267,11 @@ def predict_video(now_str, video_path, depth_path, past_depth_path, interval, js
             img = np.float32(img)/255.0
             # サイズを小さくする
             img = transform.resize(img, (height, width))
-            # コントラストをあげる
-            img = exposure.equalize_adapthist(img)
+            try:
+                # コントラストをあげる
+                img = exposure.equalize_adapthist(img)
+            except:
+                pass
 
             img_list.append(img)
 
